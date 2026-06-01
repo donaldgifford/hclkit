@@ -1,0 +1,10 @@
+[tools]
+# Shared homelab toolchain + Go pin.
+just              = "latest"
+go                = "1.26.3"
+golangci-lint     = "latest"
+goreleaser        = "latest"
+markdownlint-cli2 = "0.18.1"
+yamlfmt           = "0.20.0"
+yamllint          = "1.37.1"
+prettier          = "3.7.4"

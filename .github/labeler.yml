@@ -1,0 +1,25 @@
+---
+# Add 'root' label to any root file changes
+# Quotation marks are required for the leading asterisk
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: mise.toml
+# Add 'Documentation' label to any changes within 'docs' folder or any subfolders
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: docs/**
+      - any-glob-to-any-file: README.md
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
+repo:
+  - changed-files:
+      - any-glob-to-any-file: codecov.yaml
+      - any-glob-to-any-file: .markdownlint.yaml
+      - any-glob-to-any-file: .prettierrc.yaml
+docker:
+  - changed-files:
+      - any-glob-to-any-file: Dockerfile
+# Add 'feature' label to any PR where the head branch name starts with `feature` or has a `feature` section in the name
+feature:
+  - head-branch: ["^feature", "feature"]

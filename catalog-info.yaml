@@ -1,0 +1,18 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: hclkit
+  title: hclkit
+  description: HCL2 Shared library
+  annotations:
+    backstage.io/source-location: url:https://github.com/donaldgifford/hclkit
+    backstage.io/techdocs-ref: "dir:."
+  tags:
+    - hcl2
+    - go
+spec:
+  lifecycle: production
+  type: tool
+  owner: donald
+  system: dev-tools

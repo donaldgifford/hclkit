@@ -1,0 +1,19 @@
+# Go-specific (supplements registry-root .gitignore)
+*.test
+*.out
+*.exe
+coverage.txt
+coverage.html
+
+# Build output
+/dist/
+/bin/
+/${project_name}
+
+# IDE
+.vscode/
+.idea/
+
+# Local env
+.env
+.env.local
