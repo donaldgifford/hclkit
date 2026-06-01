@@ -1,0 +1,26 @@
+---
+# $schema=https://www.schemastore.org/mkdocs-1.6.json
+nav:
+  - Home: index.md
+  - ADRs:
+      - Overview: adr/README.md
+  - Design:
+      - Overview: design/README.md
+  - Implementation Plans:
+      - Overview: impl/README.md
+  - Investigations:
+      - Overview: investigation/README.md
+  - Plans:
+      - Overview: plan/README.md
+  - RFCs:
+      - Overview: rfc/README.md
+site_name: hclkit
+site_description: HCL2 Shared library
+docs_dir: docs
+plugins:
+  - techdocs-core
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true

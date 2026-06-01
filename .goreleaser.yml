@@ -1,47 +1,98 @@
-# goreleaser config for hclkit
-# Triggered by .forgejo/workflows/release.yml or .github/workflows/release.yml on tag push.
+---
+# $schema=https://goreleaser.com/static/schema.json
 version: 2
 
 project_name: hclkit
 
-before:
-  hooks:
-    - go mod tidy
-
 builds:
   - id: hclkit
-    main: ./cmd/hclkit
     binary: hclkit
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -trimpath
+    main: ./cmd/hclkit
     ldflags:
       - -s -w
-      - -X main.version={{ .Version }}
-      - -X main.commit={{ .Commit }}
-      - -X main.date={{ .Date }}
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
     goos:
       - linux
       - darwin
     goarch:
       - amd64
       - arm64
+    env:
+      - CGO_ENABLED=0
 
 archives:
   - id: default
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
-    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    formats: ["tar.gz"]
+    files:
+      - none*
+
+sboms:
+  - id: archives
+    artifacts: archive
+    documents:
+      - "${artifact}.spdx.json"
+    cmd: syft
+    args: ["$artifact", "--output", "spdx-json=$document"]
 
 checksum:
   name_template: 'checksums.txt'
 
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
 changelog:
-  use: git-cliff
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: "^feat:"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^fix:"
+      order: 1
+    - title: Others
+      order: 999
 
 release:
+  github:
+    owner: donaldgifford
+    name: hclkit
   draft: false
-  # TODO: when running against Forgejo, set GITEA_TOKEN in CI and uncomment:
-  # gitea_urls:
-  #   api: https://github.com/api/v1/
-  #   download: https://github.com
+  prerelease: auto
+  mode: prepend
+  header: |
+    ## Release {{ .Tag }} ({{ .Date }})
+
+    ### Installation
+
+    #### Linux/macOS (Manual)
+    ```bash
+    # Download the appropriate binary for your system
+    # Extract and move to your PATH
+    tar -xzf hclkit*.tar.gz
+    mv hclkit ~/.local/bin/
+    ```
+
+  footer: |
+    ---
+    **Full Changelog**: https://github.com/donaldgifford/hclkit/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+snapshot:
+  version_template: "{{ .Tag }}-dev"
