@@ -28,4 +28,9 @@ docz create design "Your Design Title"
 - **Abandoned**: Design was not pursued
 
 <!-- BEGIN DOCZ AUTO-GENERATED -->
+## All DESIGNs
+
+| ID | Title | Status | Date | Author | Link |
+|----|-------|--------|------|--------|------|
+| DESIGN-0001 | hclkit v0 library and validator binary | Draft | 2026-06-01 | Donald Gifford | [0001-hclkit-v0-library-and-validator-binary.md](0001-hclkit-v0-library-and-validator-binary.md) |
 <!-- END DOCZ AUTO-GENERATED -->

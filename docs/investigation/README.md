@@ -9,6 +9,11 @@ Design docs, plans, and implementation docs can reference investigations by ID
 (e.g. `INV-0001`) to document how open questions were resolved.
 
 <!-- BEGIN DOCZ AUTO-GENERATED -->
+## All INVESTIGATIONs
+
+| ID | Title | Status | Date | Author | Link |
+|----|-------|--------|------|--------|------|
+| INV-0001 | HCL Config Reuse: Shared Library vs Full DSL | Concluded | 2026-05-31 | Donald Gifford | [0001-hcl-config-reuse-shared-library-vs-full-dsl.md](0001-hcl-config-reuse-shared-library-vs-full-dsl.md) |
 <!-- END DOCZ AUTO-GENERATED -->
 <!-- BEGIN DOCZ AUTO-GENERATED -->
 <!-- END DOCZ AUTO-GENERATED -->
