@@ -23,7 +23,7 @@ homelab fleet:
 ## Layout
 
 ```
-cmd/hclkit/             main package — keep thin, parse flags + call into internal/
+cmd/hclkit/             main package — cobra subcommands, kept thin; logic lives in the library
 internal/               library code; not importable outside this module
 docs/                   docz-managed: rfc/ adr/ design/ impl/ plan/ investigation/
 scripts/                repo automation (e.g. labels.sh for GitHub label sync)
