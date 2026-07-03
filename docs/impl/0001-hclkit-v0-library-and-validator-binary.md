@@ -41,6 +41,7 @@ created: 2026-07-02
   - [4. Adopter-gate mechanics](#4-adopter-gate-mechanics)
   - [5. Release tagging cadence](#5-release-tagging-cadence)
   - [6. Fixture sourcing for the partial-decode gate](#6-fixture-sourcing-for-the-partial-decode-gate)
+  - [7. hcldec.Spec loader entry point (decide before Phase 3)](#7-hcldecspec-loader-entry-point-decide-before-phase-3)
 - [References](#references)
 <!--toc:end-->
 
@@ -118,7 +119,7 @@ Repo groundwork:
 - [x] Add `github.com/hashicorp/hcl/v2`, `github.com/zclconf/go-cty`,
       and `github.com/spf13/cobra` to `go.mod`; run `go mod tidy` and
       `just license-check`.
-- [ ] Create the `pkg/hclkit/` tree per DESIGN-0001's layout; update
+- [x] Create the `pkg/hclkit/` tree per DESIGN-0001's layout; update
       CLAUDE.md's layout/conventions sections (they currently say all
       library code lives under `internal/`, which predates the
       public-API decision in RFC-0001).
@@ -133,21 +134,25 @@ Repo groundwork:
 
 Library:
 
-- [ ] Implement `Diagnostics` (`pkg/hclkit/diag.go`): wrap
+- [x] Implement `Diagnostics` (`pkg/hclkit/diag.go`): wrap
       `hcl.Diagnostics` with `WriteTo`, `HasErrors`, `Error`, and the
       machine-parseable line prefix (format per OQ-3).
-- [ ] Implement `Loader` (`pkg/hclkit/loader.go`): `New(opts...)`,
+      *Deviation from DESIGN-0001:* `WriteTo` returns
+      `(int64, error)` — govet's stdmethods check requires the
+      `io.WriterTo` shape for that name; the design sketched a bare
+      `error` return.
+- [x] Implement `Loader` (`pkg/hclkit/loader.go`): `New(opts...)`,
       `LoadFile`, `LoadBytes`, and `LoadDir` with lexical-order,
       per-file-override merge (DESIGN-0001 open question 3 decision)
       and a `WithMergeMode(append)` opt-in.
-- [ ] Implement the Phase-1 functional options: `WithEvalContext`,
+- [x] Implement the Phase-1 functional options: `WithEvalContext`,
       `WithFunctions`, `WithVariables`, `WithDiagnosticWriter`
       (`WithVarsFile` lands in Phase 3, `WithValidators` in Phase 4).
-- [ ] Implement `internal/parser` wrappers around `hclparse` /
+- [x] Implement `internal/parser` wrappers around `hclparse` /
       `hclsyntax`.
-- [ ] Implement `internal/testutil`: golden-file helpers with a
+- [x] Implement `internal/testutil`: golden-file helpers with a
       `-update` regeneration flag, fixture loading.
-- [ ] Write unit tests for loader (file/bytes/dir, merge modes, error
+- [x] Write unit tests for loader (file/bytes/dir, merge modes, error
       paths) and golden tests for the diagnostic renderer.
 
 CLI:
@@ -278,8 +283,9 @@ Partial-decode:
       `hcl.Expression` handles for late-bound attributes.
 - [ ] Implement `partial.Walk(body, schema, fn)` for ordered
       block-kind iteration (locals-first shape).
-- [ ] Add `*hcldec.Spec` target dispatch to
-      `LoadFile`/`LoadBytes`/`LoadDir` (type switch on `target`).
+- [ ] Add `hcldec.Spec` decoding to the Loader — entry-point shape is
+      OQ-7 (the design's type-switch-on-`target` has no return path
+      for the decoded `cty.Value`); resolve before implementing.
 - [ ] Unit tests for `DecodeSpec` retained-expression flows and `Walk`
       ordering; fixtures per OQ-6.
 
@@ -581,6 +587,31 @@ live?
 > **Decision: a.** Vendor sanitized snapshots into
 > `internal/testutil/fixtures/`, recording the source repo + commit
 > with each refresh.
+
+### 7. `hcldec.Spec` loader entry point (decide before Phase 3)
+
+The Phase 1 architecture review (go-architect, 2026-07-03) found that
+DESIGN-0001's "pass `*hcldec.Spec` as the `target`" dispatch has no
+return path for the decoded value: `Load*` returns only
+`Diagnostics`, and a spec is a schema, not a decode destination —
+`gohcl` targets receive the result in place; a spec cannot. Phase 1
+therefore shipped `decode` with a single `gohcl` arm and an explicit
+invalid-target diagnostic for everything else.
+
+- **a.** _Recommended._ **Dedicated method mirroring
+  `partial.DecodeSpec`:** `LoadSpec(path string, spec hcldec.Spec)
+  (cty.Value, partial.ExprMap, Diagnostics)`. Keeps `target` meaning
+  "pointer that receives the decode" everywhere, and the return shape
+  matches the lower-level surface it wraps.
+- **b.** **Option + value destination:** keep the `Load*` entry
+  points and add `WithSpec(spec)`, with the caller passing a
+  `*cty.Value` target that receives the decoded value in place. One
+  entry point, but `ExprMap` still needs a home.
+- **c.** **Design as written:** type-switch on `target` accepting
+  `*hcldec.Spec` directly, inventing a result-carrying field on
+  `Diagnostics` or a separate results accessor. Preserves the
+  design text at the cost of a muddier calling convention.
+- **other:**
 
 ## References
 

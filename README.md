@@ -50,7 +50,8 @@ in v0 (deferred per DESIGN-0001 until a CI integration asks).
 
 ```text
 cmd/hclkit/             main package — cobra subcommands
-internal/               private implementation
+pkg/hclkit/             public library API (Loader, Diagnostics, options)
+internal/               private implementation (parser, testutil)
 docs/                   docz-managed docs (rfc/adr/design/impl/plan/investigation)
 .goreleaser.yml         release config
 mise.toml               pinned toolchain

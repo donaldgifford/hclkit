@@ -24,7 +24,9 @@ homelab fleet:
 
 ```
 cmd/hclkit/             main package — cobra subcommands, kept thin; logic lives in the library
-internal/               library code; not importable outside this module
+pkg/hclkit/             public library API (Loader, Diagnostics, options); consumers import this
+internal/parser/        hclparse wrapper (extension dispatch, file map for diagnostics)
+internal/testutil/      test-only golden/fixture helpers — import from _test.go files only
 docs/                   docz-managed: rfc/ adr/ design/ impl/ plan/ investigation/
 scripts/                repo automation (e.g. labels.sh for GitHub label sync)
 .github/workflows/      CI (ci, security, codeql, trufflehog, release, changelog, license-check, pr-labels, dependabot-severity-label, changelog-regen)
@@ -113,9 +115,12 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
   `mise.toml` in the same commit.
 - **No `vendor/`**. Modules are resolved at build time.
 - **`internal/` is a hard wall** — packages there can't be imported by
-  other modules. Use it liberally; promote to a separate module only
-  when something outside this repo actually needs it. Currently only
-  a `.gitkeep` — the library is unwritten.
+  other modules. The public API lives in `pkg/hclkit` (per RFC-0001;
+  hclkit is a fleet library, so a public surface is the point);
+  implementation details stay under `internal/`.
+- **`Diagnostics` implements both `error` and `io.WriterTo`** — the
+  embed makes discarded `Load*` returns trip errcheck in consumers;
+  don't refactor the embed into a wrapped field.
 - **`slog` for structured logs**, not `log` or third-party loggers.
   Default handler is set in `main()` so library code doesn't have to
   thread loggers.

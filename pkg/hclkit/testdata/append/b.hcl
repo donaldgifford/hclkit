@@ -1,0 +1,3 @@
+rule "second" {
+  action = "deny"
+}
