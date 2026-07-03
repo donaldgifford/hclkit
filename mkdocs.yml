@@ -13,6 +13,7 @@ nav:
         - 'DESIGN-0001: hclkit v0 library and validator binary': design/0001-hclkit-v0-library-and-validator-binary.md
     - Implementation Plans:
         - Overview: impl/README.md
+        - 'IMPL-0001: hclkit v0 library and validator binary': impl/0001-hclkit-v0-library-and-validator-binary.md
     - Investigations:
         - Overview: investigation/README.md
         - 'INV-0001: HCL Config Reuse: Shared Library vs Full DSL': investigation/0001-hcl-config-reuse-shared-library-vs-full-dsl.md
