@@ -1,7 +1,7 @@
 ---
 id: IMPL-0001
 title: "hclkit v0 library and validator binary"
-status: Draft
+status: In Progress
 author: Donald Gifford
 created: 2026-07-02
 ---
@@ -9,7 +9,7 @@ created: 2026-07-02
 
 # IMPL 0001: hclkit v0 library and validator binary
 
-**Status:** Draft
+**Status:** In Progress
 **Author:** Donald Gifford
 **Date:** 2026-07-02
 

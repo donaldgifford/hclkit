@@ -32,5 +32,5 @@ docz create impl "Your Implementation Title"
 
 | ID | Title | Status | Date | Author | Link |
 |----|-------|--------|------|--------|------|
-| IMPL-0001 | hclkit v0 library and validator binary | Draft | 2026-07-02 | Donald Gifford | [0001-hclkit-v0-library-and-validator-binary.md](0001-hclkit-v0-library-and-validator-binary.md) |
+| IMPL-0001 | hclkit v0 library and validator binary | In Progress | 2026-07-02 | Donald Gifford | [0001-hclkit-v0-library-and-validator-binary.md](0001-hclkit-v0-library-and-validator-binary.md) |
 <!-- END DOCZ AUTO-GENERATED -->
