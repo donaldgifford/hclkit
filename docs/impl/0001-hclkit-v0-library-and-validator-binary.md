@@ -160,7 +160,7 @@ CLI:
 - [ ] Implement `hclkit validate [files...]` (parse-only; emits hclkit
       diagnostics; non-zero exit on errors).
 - [x] Implement `hclkit version` (version, commit, date).
-- [ ] Document the reserved flags (`--profile`, `--format`,
+- [x] Document the reserved flags (`--profile`, `--format`,
       `--no-color`, `--schema-stdin`) as reserved/not implemented.
 - [ ] Write golden tests for `fmt --check` and `validate` output and
       exit codes.

@@ -156,17 +156,15 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 - **`goreleaser` v2 config**: `archives[].format` (v1) is now
   `archives[].formats` (slice). If you copy a pre-v2 config from
   elsewhere, validate with `just release-check`.
-- **No Dockerfile in-repo**. The README and prior CLAUDE.md mentioned
-  one; it was never committed. If you add one, mirror the SBOM/
-  signing behavior of `goreleaser` so release artifacts stay
-  consistent.
+- **No Dockerfile / container image in-repo** — deliberately deferred
+  per DESIGN-0001 open question 4 until a CI integration asks. If you
+  add one, mirror the SBOM/signing behavior of `goreleaser` so
+  release artifacts stay consistent.
 - **Coverage gates differ**: `just coverage-gate` enforces 55% per
   `internal/...` / `pkg/...` package; Codecov enforces 60%
   project-wide w/ 40% threshold. Don't mistake one passing for the
   other.
-- **Build output lives under `build/bin/`**, not `bin/`. The README
-  quickstart says `bin/hclkit`; that's stale — actual path is
-  `build/bin/hclkit`.
+- **Build output lives under `build/bin/`**, not `bin/`.
 - **`coverage.out`, not `coverage.txt`**. The justfile writes
   `coverage.out` and `.gitignore` covers both; CI uploads
   `coverage.out` to Codecov.
