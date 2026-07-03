@@ -29,6 +29,13 @@ MD010:
 MD012:
   maximum: 2
 
+# Multiple headings with the same content
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md024.md
+# siblings_only allows repeated headings under different parents — docz
+# IMPL docs repeat "Tasks" / "Success Criteria" under each phase
+MD024:
+  siblings_only: true
+
 # Line length
 # I disabled this because autoformatting takes care of the line length for me,
 # so it's not necessary, also if I have a really long markdown link with {:target="\_blank"}
