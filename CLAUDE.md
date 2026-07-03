@@ -47,7 +47,7 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 ### Build + run
 
 - `just build` — builds to `build/bin/hclkit` with `-ldflags` for
-  `main.version` / `main.commit` (no `main.date` — see Gotchas).
+  `main.version` / `main.commit` / `main.date`.
 - `just run` — builds then runs the resulting binary.
 - `just clean` — removes `build/bin/`, `coverage.out`, and the Go
   build cache.
@@ -150,10 +150,6 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 
 ## Gotchas
 
-- **`main.date` is declared but not injected**. `cmd/hclkit/main.go`
-  has `version`, `commit`, `date` vars; both `justfile` and
-  `.goreleaser.yml` only set `main.version` and `main.commit`. Either
-  wire `-X main.date=...` into the build or drop `date` from `main.go`.
 - **`go mod tidy` on first scaffold**: the homelab post-create hook
   runs it. If you skip hooks (`--no-hooks`), run it manually before
   the first `just build` or imports will be unresolved.

@@ -127,7 +127,7 @@ Repo groundwork:
       and `bench` targets `./internal/engine/...` which will not exist.
 - [x] Extend `just coverage-gate` to cover `pkg/...` (per OQ-2) and add
       `examples/` to `.codecov.yml` ignores.
-- [ ] Wire `-X main.date=...` into the justfile and `.goreleaser.yml`
+- [x] Wire `-X main.date=...` into the justfile and `.goreleaser.yml`
       ldflags (closes the CLAUDE.md gotcha; `hclkit version` prints
       version + commit + date per DESIGN-0001).
 

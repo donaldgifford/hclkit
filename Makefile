@@ -18,6 +18,7 @@ COVERAGE_MIN     ?= 55
 # Version info derived from git; falls back to dev when not in a repo or tag-less.
 COMMIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+BUILD_DATE  := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 ##@ General
 
@@ -33,7 +34,7 @@ build: build-core ## Build everything (core)
 .PHONY: build-core
 build-core: ## Build the core CLI binary into build/bin/hclkit
 	@mkdir -p $(BIN_DIR)
-	@go build -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT_HASH)" \
+	@go build -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT_HASH) -X main.date=$(BUILD_DATE)" \
 		-o $(BIN_DIR)/$(PROJECT_NAME) ./cmd/$(PROJECT_NAME)
 	@echo "✓ Core binaries built"
 
