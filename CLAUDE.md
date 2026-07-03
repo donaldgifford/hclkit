@@ -37,6 +37,7 @@ cliff.toml              git-cliff config for CHANGELOG.md
 catalog-info.yaml       Backstage entity descriptor
 mise.toml               pinned go + lint/format/security/release toolchain
 justfile                `just` task runner — `just` (no args) for the menu
+Makefile                mirror of the justfile target set (`make help`); keep in sync
 renovate.json5          extends donaldgifford/renovate-config (go + docker + mise + ci)
 .forge-lock.hcl         fleet lock file (homelab-wide)
 ```
