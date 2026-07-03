@@ -1,3 +1,6 @@
+// Command hclkit is a validator binary for HCL configuration files.
+// It fronts the hclkit library with fmt, validate, and lint
+// subcommands so developers and CI get a consistent surface.
 package main
 
 import (

@@ -115,7 +115,7 @@ end-to-end validation of the API before anything depends on it.
 
 Repo groundwork:
 
-- [ ] Add `github.com/hashicorp/hcl/v2`, `github.com/zclconf/go-cty`,
+- [x] Add `github.com/hashicorp/hcl/v2`, `github.com/zclconf/go-cty`,
       and `github.com/spf13/cobra` to `go.mod`; run `go mod tidy` and
       `just license-check`.
 - [ ] Create the `pkg/hclkit/` tree per DESIGN-0001's layout; update
