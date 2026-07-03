@@ -184,15 +184,20 @@ Adopter:
 #### Success Criteria
 
 - `just ci` (lint + test + build + license-check) passes with the new
-  packages in place.
+  packages in place. *(Verified 2026-07-03 — coverage: pkg/hclkit
+  98.2%, internal/parser 100%, internal/format 91.7%,
+  internal/testutil 55.6%.)*
 - `just coverage-gate` passes at ≥55% for every library package in its
-  (possibly extended, per OQ-2) scope.
+  (possibly extended, per OQ-2) scope. *(Verified 2026-07-03.)*
 - `hclkit fmt --check`, `hclkit validate`, and `hclkit version` behave
   per DESIGN-0001 against the `examples/nilctx` fixtures, with correct
-  exit codes.
+  exit codes. *(Verified 2026-07-03 — golden-tested + binary smoke
+  runs.)*
 - `wiz-access-cli` PR #7 builds and passes its own tests against a
   tagged hclkit, with no in-tree HCL loader or diagnostic-formatting
-  code remaining (RFC-0001 Phase 1 criterion).
+  code remaining (RFC-0001 Phase 1 criterion). *(Awaiting: merge of
+  the `feat/hclkit-v0-phase-1` PR → first tag per OQ-5 → consumer
+  migration. User action.)*
 
 ---
 
