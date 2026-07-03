@@ -59,8 +59,8 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
   less than 55% (the `coverage_min` in the justfile). Tighter than the
   Codecov project gate (60% w/ 40% threshold).
 - `just test-pkg ./internal/foo` — single package.
-- `just bench` — `./internal/engine/...` benchmarks.
-- `just profile` — runs the binary with `--profile=build/profile/`.
+- `just bench` — benchmarks across the repo (`./...`). None exist yet;
+  Phase 3 of IMPL-0001 adds load/decode benchmarks.
 
 ### Lint + format
 

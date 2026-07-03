@@ -10,7 +10,6 @@ project_owner     := "donaldgifford"
 go_package        := "github.com/" + project_owner + "/" + project_name
 build_dir         := "build"
 bin_dir           := build_dir + "/bin"
-profile_dir       := build_dir + "/profile"
 coverage_out      := "coverage.out"
 allowed_licenses  := "Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0"
 goimports_local   := "github.com/" + project_owner
@@ -59,11 +58,6 @@ run: build
 run-local: build
     @{{ bin_dir }}/{{ project_name }}
 
-# Run claudelint against its own repository (dogfood gate)
-[group('run')]
-self-check: build
-    @{{ bin_dir }}/{{ project_name }} run .
-
 # ─── Test ───────────────────────────────────────────────────────────
 
 # Run all tests with the race detector
@@ -107,18 +101,10 @@ coverage-gate:
         } \
         END { exit bad }'
 
-# Run engine benchmarks
+# Run benchmarks
 [group('test')]
 bench:
-    @go test -run='^$' -bench=. -benchmem ./internal/engine/...
-
-# Capture pprof profiles for a claudelint run (outputs to build/profile/)
-[group('test')]
-profile: build
-    @mkdir -p {{ profile_dir }}
-    @{{ bin_dir }}/{{ project_name }} run --profile={{ profile_dir }} . || true
-    @echo "✓ Profiles written to {{ profile_dir }}/"
-    @echo "  Inspect with: go tool pprof {{ profile_dir }}/cpu.pprof"
+    @go test -run='^$' -bench=. -benchmem ./...
 
 # ─── Lint & format ─────────────────────────────────────────────────
 

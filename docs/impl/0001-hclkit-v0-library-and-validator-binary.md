@@ -122,7 +122,7 @@ Repo groundwork:
       CLAUDE.md's layout/conventions sections (they currently say all
       library code lives under `internal/`, which predates the
       public-API decision in RFC-0001).
-- [ ] Fix claudelint leftovers in the justfile: `self-check` invokes a
+- [x] Fix claudelint leftovers in the justfile: `self-check` invokes a
       nonexistent `run` subcommand, `profile` assumes `run --profile`,
       and `bench` targets `./internal/engine/...` which will not exist.
 - [ ] Extend `just coverage-gate` to cover `pkg/...` (per OQ-2) and add
