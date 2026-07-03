@@ -30,7 +30,7 @@ scripts/                repo automation (e.g. labels.sh for GitHub label sync)
 .github/workflows/      CI (ci, security, codeql, trufflehog, release, changelog, license-check, pr-labels, dependabot-severity-label, changelog-regen)
 .goreleaser.yml         release config (multi-arch archives + SBOMs + signed checksums)
 .golangci.yml           lint config (Uber-style; v2 schema)
-.codecov.yml            coverage gate (project target 60%, threshold 40%; ignores main.go/docs/scripts)
+.codecov.yml            coverage gate (project target 60%, threshold 40%; ignores main.go/docs/scripts/examples)
 .docz.yaml              docz config (six doc types, MkDocs wiki integration)
 mkdocs.yml              wiki site config
 cliff.toml              git-cliff config for CHANGELOG.md
@@ -56,9 +56,9 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 
 - `just test` — race detector, no coverage.
 - `just test-coverage` — race + writes `coverage.out`.
-- `just coverage-gate` — fails if any `internal/...` package covers
-  less than 55% (the `coverage_min` in the justfile). Tighter than the
-  Codecov project gate (60% w/ 40% threshold).
+- `just coverage-gate` — fails if any `internal/...` or `pkg/...`
+  package covers less than 55% (the `coverage_min` in the justfile).
+  Tighter than the Codecov project gate (60% w/ 40% threshold).
 - `just test-pkg ./internal/foo` — single package.
 - `just bench` — benchmarks across the repo (`./...`). None exist yet;
   Phase 3 of IMPL-0001 adds load/decode benchmarks.
@@ -165,8 +165,9 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
   signing behavior of `goreleaser` so release artifacts stay
   consistent.
 - **Coverage gates differ**: `just coverage-gate` enforces 55% per
-  `internal/...` package; Codecov enforces 60% project-wide w/ 40%
-  threshold. Don't mistake one passing for the other.
+  `internal/...` / `pkg/...` package; Codecov enforces 60%
+  project-wide w/ 40% threshold. Don't mistake one passing for the
+  other.
 - **Build output lives under `build/bin/`**, not `bin/`. The README
   quickstart says `bin/hclkit`; that's stale — actual path is
   `build/bin/hclkit`.

@@ -125,7 +125,7 @@ Repo groundwork:
 - [x] Fix claudelint leftovers in the justfile: `self-check` invokes a
       nonexistent `run` subcommand, `profile` assumes `run --profile`,
       and `bench` targets `./internal/engine/...` which will not exist.
-- [ ] Extend `just coverage-gate` to cover `pkg/...` (per OQ-2) and add
+- [x] Extend `just coverage-gate` to cover `pkg/...` (per OQ-2) and add
       `examples/` to `.codecov.yml` ignores.
 - [ ] Wire `-X main.date=...` into the justfile and `.goreleaser.yml`
       ldflags (closes the CLAUDE.md gotcha; `hclkit version` prints

@@ -71,8 +71,8 @@ test-report: ## Run tests and open the HTML coverage report
 	@go tool cover -html=$(COVERAGE_OUT)
 
 .PHONY: coverage-gate
-coverage-gate: ## Fail if any internal/ package covers less than COVERAGE_MIN%
-	@go test -cover ./internal/... 2>&1 | awk -v min=$(COVERAGE_MIN) '\
+coverage-gate: ## Fail if any internal/ or pkg/ package covers less than COVERAGE_MIN%
+	@go test -cover ./internal/... ./pkg/... 2>&1 | awk -v min=$(COVERAGE_MIN) '\
 		/coverage:/ { \
 			if ($$0 ~ /no statements/) next; \
 			pct = $$0; \

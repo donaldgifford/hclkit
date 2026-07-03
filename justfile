@@ -85,10 +85,10 @@ test-report:
     @go test -coverprofile={{ coverage_out }} ./...
     @go tool cover -html={{ coverage_out }}
 
-# Fail if any internal/ package covers less than {{coverage_min}}%
+# Fail if any internal/ or pkg/ package covers less than {{coverage_min}}%
 [group('test')]
 coverage-gate:
-    @go test -cover ./internal/... 2>&1 | awk -v min={{ coverage_min }} '\
+    @go test -cover ./internal/... ./pkg/... 2>&1 | awk -v min={{ coverage_min }} '\
         /coverage:/ { \
             if ($0 ~ /no statements/) next; \
             pct = $0; \
