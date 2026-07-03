@@ -52,7 +52,7 @@ func (d Diagnostics) WriteTo(w io.Writer) (int64, error) {
 	}
 
 	cw := &countingWriter{w: w}
-	tw := hcl.NewDiagnosticTextWriter(cw, d.files, 0, false)
+	tw := hcl.NewDiagnosticTextWriter(cw, d.files, 0 /* width: no wrap */, false /* color: not a tty */)
 	for _, diag := range d.Diagnostics {
 		if _, err := io.WriteString(cw, prefixLine(diag)); err != nil {
 			return cw.n, fmt.Errorf("writing diagnostic prefix: %w", err)

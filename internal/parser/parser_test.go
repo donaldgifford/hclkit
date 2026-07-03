@@ -15,10 +15,28 @@ func TestParseBytesDispatch(t *testing.T) {
 		src      string
 		wantErr  bool
 	}{
-		{name: "native syntax", filename: "config.hcl", src: `name = "demo"`, wantErr: false},
-		{name: "json syntax", filename: "config.json", src: `{"name": "demo"}`, wantErr: false},
-		{name: "json source under hcl name fails native parse", filename: "config.hcl", src: `{"name": "demo"}`, wantErr: true},
-		{name: "native syntax error", filename: "config.hcl", src: `name = `, wantErr: true},
+		{
+			name:     "native syntax",
+			filename: "config.hcl",
+			src:      `name = "demo"`,
+		},
+		{
+			name:     "json syntax",
+			filename: "config.json",
+			src:      `{"name": "demo"}`,
+		},
+		{
+			name:     "json source under hcl name fails native parse",
+			filename: "config.hcl",
+			src:      `{"name": "demo"}`,
+			wantErr:  true,
+		},
+		{
+			name:     "native syntax error",
+			filename: "config.hcl",
+			src:      `name = `,
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {

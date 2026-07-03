@@ -175,7 +175,8 @@ func checkTarget(target any) *hcl.Diagnostic {
 		return &hcl.Diagnostic{
 			Severity: hcl.DiagError,
 			Summary:  "Invalid decode target",
-			Detail:   fmt.Sprintf("Decode target must be a non-nil pointer to a struct or map; got %T.", target),
+			Detail: fmt.Sprintf(
+				"Decode target must be a non-nil pointer to a struct or map; got %T.", target),
 		}
 	}
 	switch rv.Elem().Kind() {

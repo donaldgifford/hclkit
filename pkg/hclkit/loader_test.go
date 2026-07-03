@@ -47,7 +47,7 @@ func TestLoadBytes(t *testing.T) {
 		t.Fatalf("LoadBytes() diagnostics: %s", diags.Error())
 	}
 	if cfg.Name != "demo" || cfg.Replicas != 3 {
-		t.Errorf("LoadBytes() decoded %+v, want {Name:demo Replicas:3}", cfg)
+		t.Errorf("LoadBytes() = %+v, want {Name:demo Replicas:3}", cfg)
 	}
 }
 
@@ -60,7 +60,7 @@ func TestLoadBytesJSONDispatch(t *testing.T) {
 		t.Fatalf("LoadBytes(json) diagnostics: %s", diags.Error())
 	}
 	if cfg.Name != "demo" || cfg.Replicas != 2 {
-		t.Errorf("LoadBytes(json) decoded %+v, want {Name:demo Replicas:2}", cfg)
+		t.Errorf("LoadBytes(json) = %+v, want {Name:demo Replicas:2}", cfg)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestLoadFile(t *testing.T) {
 
 	want := appConfig{Name: "demo", Replicas: 3, Tags: []string{"a", "b"}}
 	if cfg.Name != want.Name || cfg.Replicas != want.Replicas || len(cfg.Tags) != 2 {
-		t.Errorf("LoadFile(valid.hcl) decoded %+v, want %+v", cfg, want)
+		t.Errorf("LoadFile(valid.hcl) = %+v, want %+v", cfg, want)
 	}
 }
 
@@ -107,7 +107,7 @@ func TestLoadFileJSON(t *testing.T) {
 		t.Fatalf("LoadFile(valid.json) diagnostics: %s", diags.Error())
 	}
 	if cfg.Name != "demo" || cfg.Replicas != 3 {
-		t.Errorf("LoadFile(valid.json) decoded %+v, want {Name:demo Replicas:3}", cfg)
+		t.Errorf("LoadFile(valid.json) = %+v, want {Name:demo Replicas:3}", cfg)
 	}
 }
 
@@ -338,9 +338,11 @@ func TestMergeModeString(t *testing.T) {
 		{mode: hclkit.MergeMode(9), want: "MergeMode(9)"},
 	}
 	for _, tt := range tests {
-		if got := tt.mode.String(); got != tt.want {
-			t.Errorf("MergeMode(%d).String() = %q, want %q", int(tt.mode), got, tt.want)
-		}
+		t.Run(tt.want, func(t *testing.T) {
+			if got := tt.mode.String(); got != tt.want {
+				t.Errorf("MergeMode(%d).String() = %q, want %q", int(tt.mode), got, tt.want)
+			}
+		})
 	}
 }
 
