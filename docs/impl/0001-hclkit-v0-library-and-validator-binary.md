@@ -169,9 +169,9 @@ CLI:
       `--no-color`, `--schema-stdin`) as reserved/not implemented.
 - [x] Write golden tests for `fmt --check` and `validate` output and
       exit codes.
-- [ ] Add `examples/nilctx` (the gohcl-with-nil-ctx / claudelint
+- [x] Add `examples/nilctx` (the gohcl-with-nil-ctx / claudelint
       shape) and an integration test exercising it behind
-      `//go:build integration`.
+      `//go:build integration` (`just test-integration`).
 
 Adopter:
 

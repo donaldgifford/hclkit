@@ -62,6 +62,10 @@ test: ## Run all tests with the race detector
 test-pkg: ## Test a single package: make test-pkg PKG=./pkg/foo
 	@go test -v -race $(PKG)
 
+.PHONY: test-integration
+test-integration: ## Run integration tests (build tag: integration)
+	@go test -v -race -tags=integration ./...
+
 .PHONY: test-coverage
 test-coverage: ## Run tests with a coverage profile written to coverage.out
 	@go test -v -race -coverprofile=$(COVERAGE_OUT) ./...

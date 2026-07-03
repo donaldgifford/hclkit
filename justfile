@@ -75,6 +75,11 @@ test-all: test
 test-pkg pkg:
     @go test -v -race {{ pkg }}
 
+# Run integration tests (build tag: integration)
+[group('test')]
+test-integration:
+    @go test -v -race -tags=integration ./...
+
 # Run tests with a coverage profile written to coverage.out
 [group('test')]
 test-coverage:
