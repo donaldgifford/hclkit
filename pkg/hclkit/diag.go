@@ -29,7 +29,11 @@ var (
 	_ io.WriterTo = Diagnostics{}
 )
 
-func newDiagnostics(diags hcl.Diagnostics, files map[string]*hcl.File) Diagnostics {
+// NewDiagnostics wraps raw hcl.Diagnostics with the parsed files they
+// reference (typically hclparse.Parser.Files()) so WriteTo can render
+// source snippets. Use it when assembling diagnostics from a custom
+// parse flow rather than a Loader.
+func NewDiagnostics(diags hcl.Diagnostics, files map[string]*hcl.File) Diagnostics {
 	return Diagnostics{Diagnostics: diags, files: files}
 }
 

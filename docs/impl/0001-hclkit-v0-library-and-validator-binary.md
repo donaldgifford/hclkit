@@ -160,14 +160,14 @@ CLI:
 - [x] Restructure `cmd/hclkit/main.go` into `spf13/cobra` subcommand
       dispatch (OQ-1); keep it thin — parse flags, call into the
       library.
-- [ ] Implement `hclkit fmt [files...]` via `hclwrite`, with `--check`
+- [x] Implement `hclkit fmt [files...]` via `hclwrite`, with `--check`
       for CI (non-zero exit on unformatted files).
-- [ ] Implement `hclkit validate [files...]` (parse-only; emits hclkit
+- [x] Implement `hclkit validate [files...]` (parse-only; emits hclkit
       diagnostics; non-zero exit on errors).
 - [x] Implement `hclkit version` (version, commit, date).
 - [x] Document the reserved flags (`--profile`, `--format`,
       `--no-color`, `--schema-stdin`) as reserved/not implemented.
-- [ ] Write golden tests for `fmt --check` and `validate` output and
+- [x] Write golden tests for `fmt --check` and `validate` output and
       exit codes.
 - [ ] Add `examples/nilctx` (the gohcl-with-nil-ctx / claudelint
       shape) and an integration test exercising it behind

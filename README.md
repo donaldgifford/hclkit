@@ -19,8 +19,8 @@ A `Makefile` mirroring the justfile target set is also available
 
 ```sh
 hclkit version                # version + commit + build date
-hclkit fmt [files...]         # (Phase 1, in progress) format via hclwrite; --check for CI
-hclkit validate [files...]    # (Phase 1, in progress) parse-only validation
+hclkit fmt [files...]         # format via hclwrite; --check for CI
+hclkit validate [files...]    # parse-only validation, GCC-style diagnostics
 hclkit lint --schema=x.hcl    # (Phase 4) schema-driven lint
 ```
 

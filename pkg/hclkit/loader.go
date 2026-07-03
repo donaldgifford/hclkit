@@ -236,7 +236,7 @@ func nearestFunctions(ctx *hcl.EvalContext) map[string]function.Function {
 // finish wraps diags for return and, when WithDiagnosticWriter is
 // configured, tees the rendered output there best-effort.
 func (l *Loader) finish(diags hcl.Diagnostics, files map[string]*hcl.File) Diagnostics {
-	d := newDiagnostics(diags, files)
+	d := NewDiagnostics(diags, files)
 	if l.diagWriter != nil && len(diags) > 0 {
 		//nolint:errcheck // tee is best-effort by contract; caller still gets d
 		_, _ = d.WriteTo(l.diagWriter)

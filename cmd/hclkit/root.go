@@ -1,7 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/spf13/cobra"
+
+	"github.com/donaldgifford/hclkit/pkg/hclkit"
 )
 
 // buildInfo carries the link-time version identity from main's
@@ -22,7 +27,27 @@ validation, and schema-driven linting.`,
 		SilenceUsage: true,
 	}
 
-	root.AddCommand(newVersionCmd(info))
+	root.AddCommand(
+		newFmtCmd(),
+		newValidateCmd(),
+		newVersionCmd(info),
+	)
 
 	return root
+}
+
+// fprintln writes one line best-effort. CLI output failures don't
+// change command outcomes beyond the exit code RunE errors already
+// carry.
+func fprintln(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...) //nolint:errcheck // best-effort CLI output
+}
+
+// renderDiags writes diagnostics best-effort; a rendering failure
+// must not mask the diagnostics-driven exit code.
+func renderDiags(w io.Writer, diags hclkit.Diagnostics) {
+	if len(diags.Diagnostics) == 0 {
+		return
+	}
+	_, _ = diags.WriteTo(w) //nolint:errcheck // best-effort CLI output
 }
