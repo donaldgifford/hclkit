@@ -1,4 +1,5 @@
 ---
+# $schema=https://www.schemastore.org/markdownlint-config-schema.json
 # https://github.com/DavidAnson/markdownlint
 #
 # Unordered list style
@@ -27,6 +28,13 @@ MD010:
 # blank lines when there's only 1, so increasing this to fix it
 MD012:
   maximum: 2
+
+# Multiple headings with the same content
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md024.md
+# siblings_only allows repeated headings under different parents — docz
+# IMPL docs repeat "Tasks" / "Success Criteria" under each phase
+MD024:
+  siblings_only: true
 
 # Line length
 # I disabled this because autoformatting takes care of the line length for me,
