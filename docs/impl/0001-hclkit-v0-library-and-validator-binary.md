@@ -420,10 +420,10 @@ Adopters + release gates:
 
 ## Testing Plan
 
-- [ ] Unit tests colocated with packages; `just coverage-gate` floor
+- [x] Unit tests colocated with packages; `just coverage-gate` floor
       of 55% per library package (scope per OQ-2); Codecov project
       gate 60%/40% unchanged.
-- [ ] Golden tests for the diagnostic renderer and all CLI output,
+- [x] Golden tests for the diagnostic renderer and all CLI output,
       regenerated via the `-update` flag in `internal/testutil`.
 - [ ] Integration tests behind `//go:build integration` — at minimum
       one end-to-end test per `examples/` pattern (`nilctx`,
