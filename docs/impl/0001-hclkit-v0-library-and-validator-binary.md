@@ -23,14 +23,12 @@ created: 2026-07-02
     - [Tasks](#tasks)
     - [Success Criteria](#success-criteria)
   - [Phase 2: Low-friction adopters](#phase-2-low-friction-adopters)
+  - [Phase 3: EvalContext, vars-file, refined types, and partial-decode](#phase-3-evalcontext-vars-file-refined-types-and-partial-decode)
     - [Tasks](#tasks-1)
     - [Success Criteria](#success-criteria-1)
-  - [Phase 3: EvalContext, vars-file, refined types, and partial-decode](#phase-3-evalcontext-vars-file-refined-types-and-partial-decode)
+  - [Phase 4: Cross-block validation, the lint binary, and v1.0](#phase-4-cross-block-validation-the-lint-binary-and-v10)
     - [Tasks](#tasks-2)
     - [Success Criteria](#success-criteria-2)
-  - [Phase 4: Cross-block validation, the lint binary, and v1.0](#phase-4-cross-block-validation-the-lint-binary-and-v10)
-    - [Tasks](#tasks-3)
-    - [Success Criteria](#success-criteria-3)
 - [File Changes](#file-changes)
 - [Testing Plan](#testing-plan)
 - [Dependencies](#dependencies)
@@ -76,10 +74,8 @@ until Phase 4 completes.
 - Repo groundwork the scaffold still needs: HCL/cty dependencies,
   justfile fixes, coverage-gate scope, `main.date` injection,
   CLAUDE.md layout correction.
-- Coordination checkpoints for the per-phase adopter migrations
-  (`wiz-access-cli`, `claudelint`, `mcp-go-gen`, `wiz-go-gen`, `spt`,
-  `forge`, `fwsync`, `repo-guardian`, `docz`). The migration PRs
-  themselves land in the consumer repos.
+- Tagging each merged PR (per OQ-5) so consumer migrations have
+  releases to pin.
 
 ### Out of Scope
 
@@ -89,6 +85,12 @@ until Phase 4 completes.
 - Centralized `Config` schemas, plugin/registry systems, YAML support.
 - Schema generation/inference, REPL/eval, LSP, watch mode, color
   theming (each is its own future design discussion).
+- The consumer-repo migrations (`wiz-access-cli`, `claudelint`,
+  `mcp-go-gen`, `wiz-go-gen`, `spt`, `forge`, `fwsync`,
+  `repo-guardian`, `docz`) — moved to
+  [IMPL-0002](0002-hclkit-fleet-adoption.md) so this doc contains
+  only in-repo work. RFC-0001's per-phase adopter validation still
+  applies; it gates IMPL-0002's waves, not the phases here.
 - A container image for the binary (deferred per DESIGN-0001 open
   question 4 until a CI integration asks).
 - The full `hclkit lint` schema specification — Phase 4 ships the
@@ -98,9 +100,12 @@ until Phase 4 completes.
 ## Implementation Phases
 
 Each phase builds on the previous one. A phase is complete when all
-its tasks are checked off and its success criteria are met. Phase 2's
-three adopter migrations are independent and can run in parallel;
-phase ordering elsewhere is ergonomic, not a hard dependency chain.
+its tasks are checked off and its success criteria are met. All
+tasks below are in-repo; the consumer migrations that validate each
+phase are tracked as waves in
+[IMPL-0002](0002-hclkit-fleet-adoption.md), gated on this repo's
+per-PR tags (OQ-5). Phase ordering is ergonomic, not a hard
+dependency chain.
 
 ---
 
@@ -108,9 +113,8 @@ phase ordering elsewhere is ergonomic, not a hard dependency chain.
 
 Establishes the package layout, the `Loader` API, the `Diagnostics`
 wrapper, and the parse-only CLI surface (`fmt`, `validate`,
-`version`). First adopter is **`wiz-access-cli` PR #7** — a thin
-`hclsimple` wrapper with no idiosyncrasies, the lowest-friction
-end-to-end validation of the API before anything depends on it.
+`version`). The first-adopter validation (**`wiz-access-cli`
+PR #7**) is IMPL-0002 wave 1.
 
 #### Tasks
 
@@ -173,13 +177,10 @@ CLI:
       shape) and an integration test exercising it behind
       `//go:build integration` (`just test-integration`).
 
-Adopter:
+Release:
 
-- [ ] Tag each merged PR (per-PR tagging, OQ-5); `wiz-access-cli`
-      pins the phase's latest tag.
-- [ ] `wiz-access-cli` PR #7 migrates to `hclkit.New().LoadFile` +
-      `Diagnostics.WriteTo` (gate mechanics per OQ-4); capture any API
-      friction as issues here.
+- [ ] Tag each merged PR (per-PR tagging, OQ-5); the phase's latest
+      tag is what IMPL-0002 wave 1 (`wiz-access-cli`) pins.
 
 #### Success Criteria
 
@@ -193,46 +194,23 @@ Adopter:
   per DESIGN-0001 against the `examples/nilctx` fixtures, with correct
   exit codes. *(Verified 2026-07-03 — golden-tested + binary smoke
   runs.)*
-- `wiz-access-cli` PR #7 builds and passes its own tests against a
-  tagged hclkit, with no in-tree HCL loader or diagnostic-formatting
-  code remaining (RFC-0001 Phase 1 criterion). *(Awaiting: merge of
-  the `feat/hclkit-v0-phase-1` PR → first tag per OQ-5 → consumer
-  migration. User action.)*
+- A tagged release exists for the merged Phase 1 PR (OQ-5). The
+  adopter validation (`wiz-access-cli` PR #7, RFC-0001 Phase 1
+  criterion) is IMPL-0002 wave 1 and does not gate the next phase
+  here.
 
 ---
 
 ### Phase 2: Low-friction adopters
 
-Proves the loader API holds up across multiple consumers without
-churn. All three adopters are `gohcl`-with-nil-ctx shapes; the three
-migrations are independent and can run in parallel.
-
-#### Tasks
-
-- [ ] Migrate `claudelint`: swap the in-tree loader for
-      `hclkit.New().LoadFile`, delete its diagnostic helpers.
-- [ ] Migrate `mcp-go-gen`: same sequence.
-- [ ] Migrate `wiz-go-gen`: same sequence.
-- [ ] Record per-consumer LOC delta for in-tree HCL plumbing (RFC-0001
-      targets ≥50% reduction per adopter).
-- [ ] Triage API friction found during the migrations; land any
-      breaking fixes now (pre-1.0 breaks are cheapest here, before the
-      Phase 3 surface multiplies consumers).
-- [ ] Extend the `nilctx` integration tests with any consumer shapes
-      the migrations surfaced.
-- [ ] Tag each merged PR (per OQ-5).
-
-#### Success Criteria
-
-- `claudelint`, `mcp-go-gen`, and `wiz-go-gen` all build and pass
-  their tests against a tagged hclkit with no in-tree HCL loader code
-  remaining (RFC-0001 Phase 2 criterion).
-- Each migrated consumer's diagnostic output matches hclkit's default
-  renderer (no in-tree overrides).
-- In-tree HCL plumbing LOC is down ≥50% in each adopter.
-- The `Loader` API survived three further migrations with zero
-  breaking changes, or every break is recorded with its migration
-  note.
+**Moved to [IMPL-0002](0002-hclkit-fleet-adoption.md) wave 2.** This
+phase had no in-repo implementation tasks — it was the
+`claudelint`/`mcp-go-gen`/`wiz-go-gen` migrations plus the feedback
+loop they trigger (API-friction fixes, new `examples/` shapes). Any
+hclkit changes that feedback produces land as normal PRs here; the
+tracking lives in IMPL-0002. The phase number is retained so
+cross-references (OQ-7, CLAUDE.md, commit history) stay valid; for
+in-repo work, Phase 1 proceeds directly to Phase 3.
 
 ---
 
@@ -240,11 +218,9 @@ migrations are independent and can run in parallel.
 
 The widest phase: EvalContext assembly, the standard function bundle,
 the vars-file decode path, refined `ctytypes`, and the
-`pkg/hclkit/partial` surface (the hairiest code in v0). Adopters:
-**`spt`** (EvalContext + `env()`), **`forge`** (full migration:
-vars-file + `hcldec.Spec` target + late-bound expressions), and
-**`fwsync`**'s planned vars-file work. Also the decision point that
-retires `repo-guardian`'s `applyEnvOverrides` divergence.
+`pkg/hclkit/partial` surface (the hairiest code in v0). The consumers
+this phase serves (**`spt`**, **`forge`**, **`fwsync`**, and the
+`repo-guardian` `env()` decision point) are IMPL-0002 wave 3.
 
 #### Tasks
 
@@ -294,45 +270,35 @@ Partial-decode:
 - [ ] Unit tests for `DecodeSpec` retained-expression flows and `Walk`
       ordering; fixtures per OQ-6.
 
-Benchmarks + adopters:
+Benchmarks + release:
 
 - [ ] Add load+decode benchmarks for representative consumer configs
       (a forge blueprint, a repo-guardian policy file); point
       `just bench` at them.
-- [ ] Tag each merged PR (per OQ-5).
-- [ ] `spt` migrates (EvalContext + `env()`; hosts the refined-types
-      spike).
-- [ ] `forge` migrates fully (vars-file + `hcldec.Spec` target +
-      late-bound expressions via `partial`); its in-tree
-      partial-decode helpers are deleted.
-- [ ] `fwsync` vars-file work builds on hclkit.
-- [ ] Decision point: land the library `env()` in `repo-guardian`
-      behind a feature flag; deprecate `applyEnvOverrides` over one
-      release cycle (RFC-0001 risk mitigation).
+- [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
+      IMPL-0002 wave 3 (`spt`/`forge`/`fwsync`) pins.
 
 #### Success Criteria
 
-- `spt`, `forge`, and the `fwsync` vars-file work-in-progress all
-  build and pass tests against a tagged hclkit (RFC-0001 Phase 3
-  criterion).
-- `forge` has no in-tree partial-decode code left; its late-bound
-  expression flow runs through `partial.DecodeSpec`/`ExprMap`.
-- `repo-guardian`'s `env()` semantics match the library's (flag may
-  still be in its deprecation cycle).
 - The gohcl × refined-types spike outcome (refined path or
   validating-helper fallback) is recorded in this doc.
 - Property tests and integration tests pass; `just bench` runs the
   new benchmarks; coverage gates still hold.
+- A tagged release exists for the merged Phase 3 PR(s) (OQ-5). The
+  adopter validation (`spt`/`forge`/`fwsync`, RFC-0001 Phase 3
+  criterion) is IMPL-0002 wave 3 and does not gate the next phase
+  here.
 
 ---
 
 ### Phase 4: Cross-block validation, the lint binary, and v1.0
 
-Ships the two decode-time validators, the schema-driven `hclkit lint`
-subcommand, and the final two migrations (**`repo-guardian`**,
-**`docz`**). Ends with the partial-decode test gate, the DSL
-re-trigger evaluation, and the v1.0.0 tag — after which SemVer
-applies.
+Ships the two decode-time validators and the schema-driven
+`hclkit lint` subcommand. Ends with the partial-decode test gate,
+the DSL re-trigger evaluation, and the v1.0.0 tag — after which
+SemVer applies. The final two migrations (**`repo-guardian`**,
+**`docz`**) are IMPL-0002 wave 4, which must be green before the
+v1.0.0 tag.
 
 #### Tasks
 
@@ -360,36 +326,32 @@ Lint binary:
 - [ ] Golden tests for lint output and exit codes; document the
       schema grammar in the README or docs.
 
-Adopters + release gates:
+Release gates:
 
-- [ ] `repo-guardian` migrates fully: `locals`-first flow on
-      `partial.Walk` + `EvalCtxBuilder.WithLocals`; manual
-      `decodeBody` deleted; `applyEnvOverrides` removed at the end of
-      its deprecation cycle.
-- [ ] `docz` gains HCL support on hclkit, using `RefValidator` /
-      `UniqueValidator` for its meta-model (`decides` refs,
-      `id_prefix` uniqueness).
-- [ ] Wire `hclkit lint` (or `validate`) into CI for at least two
-      consumers.
 - [ ] Run the partial-decode test pass against real `forge` and
       `repo-guardian` fixtures end-to-end, including EvalContext +
-      late-bound expression flows (v1.0 gate; fixtures per OQ-6).
+      late-bound expression flows (v1.0 gate; vendored fixtures per
+      OQ-6).
 - [ ] Evaluate the DSL re-trigger: re-run INV-0001 section C against
       the then-current `claudelint`, `fwsync`, and `repo-guardian`
       rule grammars; record the outcome in RFC-0001's references.
 - [ ] Sweep the public API for pre-1.0 regrets (naming, option shapes,
       error contracts) — last chance for breaking changes.
+- [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
+      IMPL-0002 wave 4 (`repo-guardian`/`docz`) pins.
 - [ ] Tag v1.0.0 (`just release v1.0.0`; requires `GPG_FINGERPRINT`
-      in repo Secrets). SemVer applies from here.
+      in repo Secrets). Waits on IMPL-0002 wave 4 — RFC-0001's
+      Phase 4 criterion requires the final adopters green. SemVer
+      applies from here.
 
 #### Success Criteria
 
-- `repo-guardian` and `docz` both build and pass tests against a
-  tagged hclkit (RFC-0001 Phase 4 criterion).
-- `hclkit lint` runs in CI for at least two consumers.
-- The partial-decode gate passed against real forge and repo-guardian
-  fixtures.
+- The partial-decode gate passed against the vendored forge and
+  repo-guardian fixtures (OQ-6).
 - The DSL re-trigger evaluation is documented (triggered or not).
+- IMPL-0002 wave 4 is green (`repo-guardian` + `docz` against a
+  tagged hclkit; `hclkit lint` in CI for two consumers — RFC-0001
+  Phase 4 criterion).
 - v1.0.0 is tagged with signed, SBOM-carrying release artifacts, and
   the public API is under SemVer.
 
@@ -442,11 +404,9 @@ Adopters + release gates:
 - `github.com/hashicorp/hcl/v2` (MPL-2.0 — on the license allow list),
   `github.com/zclconf/go-cty` (MIT), and `github.com/spf13/cobra`
   (Apache-2.0) per OQ-1.
-- Consumer repos and their queued work: `wiz-access-cli` PR #7
-  (Phase 1), `claudelint`/`mcp-go-gen`/`wiz-go-gen` (Phase 2),
-  `spt`/`forge`/`fwsync` vars-file work (Phase 3),
-  `repo-guardian`/`docz` HCL support (Phase 4). Adopter-dependent
-  criteria can stall on consumer-repo availability — see OQ-4.
+- Consumer migrations are tracked in
+  [IMPL-0002](0002-hclkit-fleet-adoption.md); only the v1.0.0 tag
+  (Phase 4) waits on them. Gate mechanics per OQ-4.
 - `GPG_FINGERPRINT` in repo Secrets for signed release tags
   (`just release-local` for signing-free snapshots).
 - DESIGN-0001's six open questions are all decided; this doc inherits
