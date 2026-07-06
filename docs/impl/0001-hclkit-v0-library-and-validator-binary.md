@@ -618,6 +618,13 @@ invalid-target diagnostic for everything else.
   design text at the cost of a muddier calling convention.
 - **other:**
 
+> **Decision: a.** Dedicated `LoadSpec(path, spec) (cty.Value,
+> partial.ExprMap, Diagnostics)` mirroring `partial.DecodeSpec`.
+> Keeps `target` meaning "pointer that receives the decode"
+> everywhere, gives `ExprMap` an explicit home, and avoids growing
+> `Diagnostics` into a result carrier (its error embed is
+> load-bearing for consumer errcheck coverage).
+
 ## References
 
 - [DESIGN-0001 — hclkit v0 library and validator binary](../design/0001-hclkit-v0-library-and-validator-binary.md)
