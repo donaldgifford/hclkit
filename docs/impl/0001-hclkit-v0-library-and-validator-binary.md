@@ -177,8 +177,9 @@ CLI:
 
 Release:
 
-- [ ] Tag each merged PR (per-PR tagging, OQ-5); the phase's latest
+- [x] Tag each merged PR (per-PR tagging, OQ-5); the phase's latest
       tag is what IMPL-0002 wave 1 (`claudelint`/`mcp-go-gen`) pins.
+      *(v0.1.0 auto-tagged on the Phase 1 PR merge, 2026-08-01.)*
 
 #### Success Criteria
 
