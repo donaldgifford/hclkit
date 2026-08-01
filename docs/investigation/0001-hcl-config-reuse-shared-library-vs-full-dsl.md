@@ -194,14 +194,12 @@ is mechanical. Mark whether each is included and why.
 | Repo           | Link / local path                                 | HCL config?      | Included? | Notes                                                                                                                                 |
 | -------------- | ------------------------------------------------- | ---------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | repo-guardian  | <https://github.com/donaldgifford/repo-guardian>  | yes              | yes       | Only repo with a real `subject op expected` rule grammar today; partial `hclsyntax` decode + `locals`. Heaviest plumbing (~1087 LOC). **Trajectory:** likely to add a Terraform-style vars-file path next. |
-| fwsync         | <https://github.com/donaldgifford/fwsync>         | yes              | yes       | Today: structured-content store for compliance docs (`gohcl`, no ctx). **Trajectory:** moves toward forge-shape — variables/vars files, HCL-wrapped wiz/OpenSemgrep rule blocks (open question: rule body inlined HCL ops vs transport for existing semgrep syntax). Wiz SDK underneath creates frameworks/automations/policies in Wiz + renders Markdown for rfc-site / rfc-api. |
+| fwsync         | <https://github.com/donaldgifford/fwsync>         | yes              | yes       | Today: structured-content store for compliance docs (`gohcl`, no ctx). **Trajectory:** moves toward forge-shape — variables/vars files, HCL-wrapped OpenSemgrep rule blocks (open question: rule body inlined HCL ops vs transport for existing semgrep syntax). A vendor SDK underneath creates frameworks/automations/policies upstream + renders Markdown for rfc-site / rfc-api. |
 | forge          | <https://github.com/donaldgifford/forge>          | yes              | yes       | Scaffolding tool. Heavy expression use (templates, `condition.when`), Terraform-style `variable` blocks, 6 custom `cty` funcs. Today's reference exemplar for the variables-and-EvalContext pattern. |
-| wiz-go-gen     | <https://github.com/donaldgifford/wiz-go-gen>     | yes              | yes       | Codegen config (`wiz-sdk-gen.hcl`). `hclsimple`/`gohcl`, nil ctx. Trivial. Style template cited by docz meta-model plans.              |
 | claudelint     | <https://github.com/donaldgifford/claudelint>     | yes              | yes       | Today: linter config (`gohcl` + `cty.Value` as opaque `options` bag). **Trajectory:** config-driven custom rules — a real rule-grammar consumer in the medium term. |
 | mcp-go-gen     | <https://github.com/donaldgifford/mcp-go-gen>     | yes              | yes       | MCP server scaffolding config. `gohcl`, nil ctx. Trivial. Style template cited by docz meta-model plans.                              |
 | spt            | <https://github.com/donaldgifford/spt>            | yes              | yes       | Runtime service config; multi-file merge. `gohcl` **with EvalContext** — registers an `env()` function.                               |
 | webhookd       | <https://github.com/donaldgifford/webhookd>       | planned (RFC)    | no        | Current `internal/` has zero `hcl` imports. RFC-0001/ADR-0009 commit to `gohcl` + partial decode but IMPL-0004 has not started.       |
-| wiz-access-cli | <https://github.com/donaldgifford/wiz-access-cli> | PR-only (PR #7)  | yes       | `feature/cli-mvp` (open). Declarative resource model — `project`/`team_mapping`/`custom_role`. `hclsimple`, nil ctx. Likely first hclkit consumer if hclkit lands first. |
 | docz           | <https://github.com/donaldgifford/docz>           | planned          | yes       | Planned HCL support alongside legacy YAML. Will host the PST doc-model feature: a higher-order grammar where users declare custom doctypes that compile down to docz's existing doctype config. (Subsumes the prior "pst-doc-model" candidate.) |
 
 ## Findings
@@ -213,14 +211,12 @@ Fill in as the survey proceeds. The overlap _is_ the evidence.
 | Repo           | Decode method                            | Expressions? | Vars/`locals`?            | Cross-block refs? | Custom `cty` funcs                                                                            | Primitive/domain types                                          | "Rule"/assertion concept? (shape)                                                                            | Operator vocab                                                          | Subject resolution                                              | Effects on match/fail                                            | Config author              | Plumbing LOC |
 | -------------- | ---------------------------------------- | ------------ | ------------------------- | ----------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------- | ------------ |
 | repo-guardian  | `hclsyntax` partial (manual `decodeBody`) | yes          | yes — `locals` block      | yes — `local.*`   | none (vars only)                                                                              | none custom; durations as `string` + `time.ParseDuration`; RE2 regex compiled at load | yes — `rule "file" { assertion { ... } }`, `rule "setting" { property/expected }`, `rule "branch_protection"` | `pattern`, `not_pattern`, `equals`, `contains`, `non_empty`; `exists`/`contains`/`exact` for file checks | implicit by rule type (filesystem path / GraphQL property / branch ruleset) | emit issue + optionally open/update remediation PR; reconcile repo state | engineer in-repo (platform) | ~1087        |
-| fwsync         | `gohcl`, nil ctx                         | no           | no                        | no (Go-side only) | none                                                                                          | none (Severity/SASTEngine as plain string)                      | no — structured content store (controls + `wiz_policy` refs by string ID)                                    | n/a                                                                     | n/a                                                             | n/a (renders to Markdown/Wiz/SAST downstream)                    | engineer in-repo (security) | ~551         |
+| fwsync         | `gohcl`, nil ctx                         | no           | no                        | no (Go-side only) | none                                                                                          | none (Severity/SASTEngine as plain string)                      | no — structured content store (controls + vendor-policy refs by string ID)                                    | n/a                                                                     | n/a                                                             | n/a (renders to Markdown/SAST downstream)                    | engineer in-repo (security) | ~551         |
 | forge          | mixed: `hcldec` + manual `PartialContent` + `hclsyntax.ParseTemplate` | yes (heavy) | yes — `variable` blocks + `.forge-vars.hcl` | yes — `var.*` interpolation | `snakeCase`, `camelCase`, `pascalCase`, `kebabCase`, `now`, `env` + 7 stdlib (`upper`, `lower`, `title`, `replace`, `trimPrefix`, `trimSuffix`, `coalesce`) | none refined (variable types: string/bool/number → `cty.Type`)  | no — `condition { when, exclude }` gates file inclusion (boolean expr, not `subj op exp`)                    | full HCL expression language                                            | variable interpolation via EvalContext                          | file-system mutation (write/rename/exclude)                      | engineer (blueprint) / end user (vars) | ~1886        |
-| wiz-go-gen     | `hclsimple` (`gohcl`), nil ctx           | no           | no                        | no                | none                                                                                          | none                                                            | no                                                                                                           | n/a                                                                     | n/a                                                             | drives Go code generation                                        | engineer (SDK author)       | ~44          |
 | claudelint     | `gohcl`, nil ctx (+ `cty.Value` for `options`) | no       | no                        | no                | none registered (cty used as type carrier, not eval)                                          | none (severity = plain string, validated semantically)          | no — `rule "<id>" {...}` only overrides settings; lint rules live in Go                                      | n/a                                                                     | rule IDs resolved to Go-registered rules                        | enable/disable rule, change severity, narrow path globs          | end user (linter consumer)  | ~269         |
 | mcp-go-gen     | `gohcl`, nil ctx                         | no           | no                        | no                | none                                                                                          | none                                                            | no                                                                                                           | n/a                                                                     | n/a                                                             | codegen output (MCP server source + manifests)                   | engineer (server author)    | ~79          |
 | spt            | `gohcl` **with EvalContext**             | yes          | no                        | no                | `env(name) → string`                                                                          | none (durations as `string`, parsed downstream)                 | no                                                                                                           | n/a                                                                     | n/a                                                             | process runtime config                                           | engineer / operator         | ~293         |
 | webhookd       | planned: `gohcl` + `,remain` partial decode | no (planned) | no (planned)            | no (planned)      | none (planned)                                                                                | none (planned; durations as string)                             | no                                                                                                           | n/a                                                                     | n/a                                                             | provider × backend wiring at boot (planned)                      | engineer / operator (planned) | n/a (not impl) |
-| wiz-access-cli | `hclsimple` (`gohcl`), nil ctx           | no           | no                        | no in-HCL (Go-side string refs) | none                                                                                | none (all scalars plain string)                                 | no — declarative resource model (`project`, `team_mapping`, `custom_role`)                                   | n/a                                                                     | n/a                                                             | create/update/delete Wiz API resources; ID writeback to HCL      | end user / security operator | ~73 (parser) + ~149 (writer) + ~92 (generate) |
 | docz (planned) | planned: `gohcl` + custom validation in Go decoder; legacy YAML path retained during transition | no (planned) | no (planned)        | **yes (planned, decode-time)** — meta-model relationship verbs whose target must resolve to a declared block of a stated kind | none planned                                                                  | **closed-set enum refinement** + **per-type uniqueness constraints** (e.g. unique `id_prefix`) | no — meta-model (declares doctypes; instances live in docz itself)                                           | n/a                                                                     | n/a                                                             | compiles to docz's existing doctype config + generates API registry, site nav, glossary, diagram, lint rules | engineer (platform docs maintainer) | n/a (not impl) |
 
 ### Cross-repo overlap synthesis
@@ -229,7 +225,7 @@ What actually recurs across repos (this drives the verdict):
 
 | Candidate shared element                            | Repos that use it                                                                              | Same machinery?                                            | Same values/semantics?                                                | Centralize? (library / DSL / no) |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------- |
-| Parser + diagnostics plumbing (load file → decode → format diags) | fwsync, wiz-go-gen, claudelint, mcp-go-gen, spt, wiz-access-cli (+ webhookd planned, docz planned) | nearly — 5+ repos wrap `hclsimple`/`gohcl` near-identically | n/a                                                                   | **library** (high payoff)        |
+| Parser + diagnostics plumbing (load file → decode → format diags) | fwsync, claudelint, mcp-go-gen, spt (+ webhookd planned, docz planned) | nearly — 4 repos wrap `hclsimple`/`gohcl` near-identically | n/a                                                                   | **library** (high payoff)        |
 | EvalContext construction (functions + variables)    | spt (funcs), repo-guardian (vars + locals), forge (funcs + vars + locals) (+ fwsync planned, repo-guardian future vars files) | no — multiple different shapes today                       | n/a                                                                   | **library** (factor out the assembly) |
 | Vars-file decode path (Terraform-style `.tfvars` shape, separate user-input file) | forge (`.forge-vars.hcl`) today; fwsync planned; repo-guardian likely next               | no — single consumer today, but a 3-consumer shape is forming | similar intent (typed user input bound into EvalContext at load time) | **library** (lift forge's pattern to a first-class primitive) |
 | Custom func `env(name)`                             | spt, forge                                                                                     | similar (both read `os.Getenv`-style with empty fallback)  | same Unix-shell-default semantics                                     | **library**                      |
@@ -239,15 +235,15 @@ What actually recurs across repos (this drives the verdict):
 | Primitive: Duration                                 | repo-guardian, spt, webhookd (planned) — all as `string` + `time.ParseDuration` downstream     | no — none validate at decode time                          | semantically same, parsed at different layers                         | **library** (refined `cty` type w/ load-time validation) |
 | Primitive: Regex                                    | repo-guardian only (RE2 via Go `regexp`)                                                        | n/a                                                        | n/a                                                                   | library (helper, low cost)       |
 | Primitive: validated enum machinery                 | fwsync (Severity), claudelint (severity), repo-guardian (rule kinds), pst-doc-model planned (`class`, `permanence`) | no — each validates ad hoc post-decode (pst-doc-model proposes decode-time refinement) | similar intent                                                        | **library** (generic enum refinement) |
-| Cross-block reference validation (target must resolve to declared block of a stated kind) | fwsync (string-keyed Go-side post-decode), wiz-access-cli (string-keyed Go-side post-decode), docz meta-model planned (decode-time, with HCL position diagnostics) | no — current consumers resolve in Go without HCL-position diagnostics | similar intent (declared-name lookup) | **library** (declared verbs + target-kind constraint + diag surface) |
-| Uniqueness constraints (e.g. unique `id_prefix`, unique rule IDs, unique labels) | docz meta-model planned; repo-guardian (rule IDs by convention), wiz-access-cli (resource labels by convention) | no — currently convention-only or ad hoc                   | similar intent                                                        | **library** (generic uniqueness validator) |
-| Operator: `equals`                                  | repo-guardian today; claudelint custom rules planned; fwsync wiz/OpenSemgrep rules planned (TBC) | n/a today                                                  | literal equality                                                      | **defer DSL** today; reopen when ≥2 ship with aligned vocab |
+| Cross-block reference validation (target must resolve to declared block of a stated kind) | fwsync (string-keyed Go-side post-decode), docz meta-model planned (decode-time, with HCL position diagnostics) | no — current consumers resolve in Go without HCL-position diagnostics | similar intent (declared-name lookup) | **library** (declared verbs + target-kind constraint + diag surface) |
+| Uniqueness constraints (e.g. unique `id_prefix`, unique rule IDs, unique labels) | docz meta-model planned; repo-guardian (rule IDs by convention) | no — currently convention-only or ad hoc                   | similar intent                                                        | **library** (generic uniqueness validator) |
+| Operator: `equals`                                  | repo-guardian today; claudelint custom rules planned; fwsync OpenSemgrep rules planned (TBC) | n/a today                                                  | literal equality                                                      | **defer DSL** today; reopen when ≥2 ship with aligned vocab |
 | Operator: `matches` / `pattern`                     | repo-guardian today (RE2); claudelint planned; fwsync planned (TBC)                            | n/a today                                                  | RE2 today; semgrep flavour TBC if fwsync inlines pattern syntax       | defer DSL today; reopen later     |
 | Operator: `contains`                                | repo-guardian today; claudelint planned; fwsync planned (TBC)                                  | n/a today                                                  | substring today                                                       | defer DSL today; reopen later     |
 | Operator: `in`                                      | none today; plausible in claudelint custom rules                                               | n/a                                                        | n/a                                                                   | defer DSL                        |
 | Operator: `exists`                                  | repo-guardian today (`exists`/`contains`/`exact` file check modes)                             | n/a                                                        | filesystem presence today                                             | defer DSL today; reopen later     |
 | Boolean composition (`and`/`or`/`not`, `all`/`any`) | none today (only HCL expression `&&`/`||` in forge)                                            | n/a                                                        | n/a                                                                   | defer DSL                        |
-| Rule block grammar (`subject op expected`)          | repo-guardian today; claudelint planned (config-driven custom rules); fwsync planned (wiz/OpenSemgrep, TBC) | n/a today                                                  | n/a today                                                             | **defer DSL today; trigger condition: ≥2 of {claudelint custom rules, fwsync wiz rules, evolved repo-guardian} ship with aligned operator vocabulary** |
+| Rule block grammar (`subject op expected`)          | repo-guardian today; claudelint planned (config-driven custom rules); fwsync planned (OpenSemgrep, TBC) | n/a today                                                  | n/a today                                                             | **defer DSL today; trigger condition: ≥2 of {claudelint custom rules, fwsync OpenSemgrep rules, evolved repo-guardian} ship with aligned operator vocabulary** |
 
 ### Observation notes
 
@@ -257,9 +253,9 @@ What actually recurs across repos (this drives the verdict):
   `repo-guardian` has a `subject op expected` grammar today.** A "shared
   rule-grammar DSL" would currently have exactly one consumer. That kills the
   C1 signal until a second grammar-sharing repo materializes.
-- **Decode-method split sets the library shape.** Five repos use plain
-  `gohcl`/`hclsimple` with nil ctx (fwsync, wiz-go-gen, claudelint, mcp-go-gen,
-  wiz-access-cli) + planned webhookd. Two register an EvalContext (spt funcs,
+- **Decode-method split sets the library shape.** Three repos use plain
+  `gohcl`/`hclsimple` with nil ctx (fwsync, claudelint, mcp-go-gen)
+  + planned webhookd. Two register an EvalContext (spt funcs,
   repo-guardian vars+locals). One uses `hcldec` + manual partial decode (forge).
   A "make `gohcl` ergonomic" library helps the majority; `forge` and
   `repo-guardian` need richer building blocks (EvalContext assembly, expression
@@ -285,10 +281,6 @@ What actually recurs across repos (this drives the verdict):
 - **`webhookd` is RFC-only.** Current `internal/` has no HCL imports; ADR-0009
   commits to `gohcl` + partial decode but IMPL-0004 has not started. Building
   the hclkit consumer story around webhookd is premature.
-- **`wiz-access-cli` HCL lives in PR #7 (open, `feature/cli-mvp`).** Mainline
-  has no HCL. If hclkit lands first, that PR is a candidate first-consumer
-  for the library (it's a thin `hclsimple` wrapper that would benefit
-  directly).
 - **`forge` is the outlier in scope.** It's the only repo with end-user
   `variable` prompting + a separate `.forge-vars.hcl` input file. That
   Terraform-style variable-input pattern is unique and probably too
@@ -299,8 +291,8 @@ What actually recurs across repos (this drives the verdict):
 - **Forward trajectory shifts the picture meaningfully** (per direction from the
   owner; not derivable from the current code):
   - **`fwsync` moves toward `forge`-shape.** Adds variables / vars-file
-    decode and HCL-wrapped wiz rules (or the OpenSemgrep rule format).
-    The Wiz SDK underneath continues to produce Wiz frameworks /
+    decode and HCL-wrapped OpenSemgrep-style rules.
+    The vendor SDK underneath continues to produce frameworks /
     automations / policies _and_ render Markdown for `rfc-site` /
     `rfc-api`. **Open question:** are the rule bodies inlined HCL ops
     (real grammar consumer) or HCL transport for an existing semgrep
@@ -329,10 +321,10 @@ What actually recurs across repos (this drives the verdict):
   1. **Cross-block reference validation at decode time** — when a block
      declares a relationship to another named block, the target must
      resolve to a block of a stated kind, and a mismatch must surface
-     as a diagnostic with HCL position info. Current consumers
-     (`fwsync`, `wiz-access-cli`) do string-keyed lookups in Go
+     as a diagnostic with HCL position info. The current consumer
+     (`fwsync`) does string-keyed lookups in Go
      post-decode, without position-aware diagnostics. A shared
-     verb-and-target-kind primitive would help both retroactively.
+     verb-and-target-kind primitive would help it retroactively.
   2. **Uniqueness constraints** — per-type uniqueness (unique
      `id_prefix`, unique rule IDs, unique resource labels) is currently
      convention-only or ad hoc. A generic uniqueness validator is a
@@ -347,7 +339,7 @@ What actually recurs across repos (this drives the verdict):
   compose their own small grammars.
 - **C1/DSL signal: false today, plausibly true in 12–18 months.** Today
   only `repo-guardian` exposes a `subject op expected` grammar.
-  Forward-looking, `claudelint` (custom rules) and `fwsync` (wiz/OpenSemgrep
+  Forward-looking, `claudelint` (custom rules) and `fwsync` (OpenSemgrep
   rules, if HCL-native) become grammar consumers. Two of three would
   trip C1, but only if they align on an operator vocabulary. The
   recommendation should therefore be **library now with a defined DSL
@@ -355,17 +347,17 @@ What actually recurs across repos (this drives the verdict):
 - **Decision pattern today: "A several Yes · B Yes · C mostly No" →
   shared library (mechanism only).** A, B, X all pass; C1–C5 do not.
   Re-trigger condition: when ≥2 of {claudelint custom rules, fwsync
-  wiz/OpenSemgrep rules, evolved repo-guardian} ship with an aligned
+  OpenSemgrep rules, evolved repo-guardian} ship with an aligned
   operator vocabulary, re-run the C-section.
 
 ## Conclusion
 
 **Answer: Library now, DSL deferred — with a defined re-trigger condition.**
 
-The survey of 9 active repos plus 1 planned consumer (`docz` w/ HCL support)
+The survey of 7 active repos plus 1 planned consumer (`docz` w/ HCL support)
 maps onto the decision matrix as **"A several Yes · B Yes · C mostly No"**:
 
-- **A (centralization warranted).** Five or more repos wrap
+- **A (centralization warranted).** Four repos wrap
   `hclsimple`/`gohcl` with near-identical boilerplate; three repos build
   ad-hoc EvalContexts; durations and enums are validated post-decode in
   several places with no uniform diagnostics; the `env()` lookup is
@@ -379,7 +371,7 @@ maps onto the decision matrix as **"A several Yes · B Yes · C mostly No"**:
   `subject op expected` rule grammar today. `fwsync` is a
   structured-content store, not an assertion engine. The `docz`
   meta-model is a meta-model, not a rule grammar. Forward-looking,
-  `claudelint` custom rules and `fwsync` wiz/OpenSemgrep rules are
+  `claudelint` custom rules and `fwsync` OpenSemgrep rules are
   plausible grammar consumers in 12–18 months, but neither exists yet
   and their operator vocabularies have not been designed. C6 (willing
   to own the DSL tax) is unanswered.
@@ -405,8 +397,8 @@ schemas.
 consumers, present or planned):
 
 1. **Loader + diagnostic wrapper around `gohcl`/`hclsimple`.** Replaces
-   the near-duplicate boilerplate in fwsync, wiz-go-gen, claudelint,
-   mcp-go-gen, spt, wiz-access-cli (and webhookd / docz when they land).
+   the near-duplicate boilerplate in fwsync, claudelint,
+   mcp-go-gen, spt (and webhookd / docz when they land).
 2. **EvalContext assembly.** Declarative registration of functions and
    variables/locals. Subsumes the three different shapes in spt,
    repo-guardian, forge — and the planned shapes in fwsync,
@@ -432,7 +424,7 @@ consumers, present or planned):
 7. **Cross-block reference validation.** Declared verbs with
    target-kind constraints, resolved at decode time with
    position-aware diagnostics. Targets the docz meta-model directly
-   and helps fwsync / wiz-access-cli retrofit their Go-side string
+   and helps fwsync retrofit its Go-side string
    lookups.
 8. **Generic uniqueness validator.** Per-type uniqueness on a named
    attribute (e.g. `id_prefix`, label, rule ID). Small primitive,
@@ -448,13 +440,13 @@ Out of scope for v0:
 
 ### Sequence the adopters
 
-1. **First consumer: `wiz-access-cli` (PR #7).** It's an `hclsimple`
+1. **First consumer: `claudelint`.** It's a `gohcl`-with-nil-ctx
    thin wrapper with no idiosyncrasies — the path of least resistance
    to validate the loader/diagnostics surface end-to-end before
    anything depends on it.
-2. **Second wave (low friction): `claudelint`, `mcp-go-gen`,
-   `wiz-go-gen`.** All `gohcl`-with-nil-ctx, all trivial. Retrofit
-   them once the loader API is stable.
+2. **Second wave (low friction): `mcp-go-gen`.** Also
+   `gohcl`-with-nil-ctx, trivial. Retrofit
+   it once the loader API is stable.
 3. **Third wave (drives the EvalContext surface): `spt`, then `forge`,
    then `fwsync` planned, then `repo-guardian`** (which is the most
    work, given its `hclsyntax` partial decode and `locals` handling).
@@ -464,7 +456,7 @@ Out of scope for v0:
 ### Defer the DSL layer with a defined re-trigger
 
 **Trigger condition:** when ≥2 of {`claudelint` config-driven custom
-rules, `fwsync` wiz/OpenSemgrep rule blocks, evolved `repo-guardian`
+rules, `fwsync` OpenSemgrep rule blocks, evolved `repo-guardian`
 rule grammar} have shipped or have stable specs, and their operator
 vocabularies overlap meaningfully, re-open the C-section of this
 investigation. At that point, the question becomes a design question
@@ -473,9 +465,9 @@ sharing is warranted.
 
 **Open questions to resolve before the DSL trigger fires:**
 
-- Are `fwsync`'s wiz rule bodies inlined HCL operators (real grammar
-  consumer) or HCL transport for an existing semgrep YAML/JSON pattern
-  syntax (config wrapper)? The answer changes whether `fwsync` counts
+- Are `fwsync`'s OpenSemgrep rule bodies inlined HCL operators (real
+  grammar consumer) or HCL transport for an existing semgrep YAML/JSON
+  pattern syntax (config wrapper)? The answer changes whether `fwsync` counts
   toward the trigger.
 - Is the team willing to pay the DSL tax (C6) — versioned operator
   surface, backward-compat policy on operator names/semantics, written

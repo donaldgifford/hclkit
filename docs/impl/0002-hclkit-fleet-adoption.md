@@ -19,25 +19,22 @@ created: 2026-07-06
   - [In Scope](#in-scope)
   - [Out of Scope](#out-of-scope)
 - [Adoption Waves](#adoption-waves)
-  - [Wave 1: wiz-access-cli (first adopter)](#wave-1-wiz-access-cli-first-adopter)
+  - [Wave 1: Low-friction adopters](#wave-1-low-friction-adopters)
     - [Tasks](#tasks)
     - [Success Criteria](#success-criteria)
-  - [Wave 2: Low-friction adopters](#wave-2-low-friction-adopters)
+  - [Wave 2: EvalContext and partial-decode consumers](#wave-2-evalcontext-and-partial-decode-consumers)
     - [Tasks](#tasks-1)
     - [Success Criteria](#success-criteria-1)
-  - [Wave 3: EvalContext and partial-decode consumers](#wave-3-evalcontext-and-partial-decode-consumers)
+  - [Wave 3: Final adopters and the v1.0 gate](#wave-3-final-adopters-and-the-v10-gate)
     - [Tasks](#tasks-2)
     - [Success Criteria](#success-criteria-2)
-  - [Wave 4: Final adopters and the v1.0 gate](#wave-4-final-adopters-and-the-v10-gate)
-    - [Tasks](#tasks-3)
-    - [Success Criteria](#success-criteria-3)
 - [Dependencies](#dependencies)
 - [References](#references)
 <!--toc:end-->
 
 ## Objective
 
-Track the nine consumer-repo migrations onto `hclkit` that validate
+Track the seven consumer-repo migrations onto `hclkit` that validate
 each phase of [IMPL-0001](0001-hclkit-v0-library-and-validator-binary.md).
 This work was originally embedded in IMPL-0001's phases, but every
 task here lands in a *consumer* repo (or is triggered by consumer
@@ -60,9 +57,8 @@ merging in the consumer repo is not required.
 
 ### In Scope
 
-- The nine consumer migrations: `wiz-access-cli`, `claudelint`,
-  `mcp-go-gen`, `wiz-go-gen`, `spt`, `forge`, `fwsync`,
-  `repo-guardian`, `docz`.
+- The seven consumer migrations: `claudelint`, `mcp-go-gen`, `spt`,
+  `forge`, `fwsync`, `repo-guardian`, `docz`.
 - Feedback loops back into hclkit: API-friction triage, pre-1.0
   breaking fixes, and new `examples/` shapes surfaced by migrations
   (the resulting hclkit changes land as normal PRs against this
@@ -78,50 +74,28 @@ merging in the consumer repo is not required.
 
 ## Adoption Waves
 
-Waves gate on hclkit tags, not on each other: waves 1 and 2 both
-need only the Phase 1 surface and can run in parallel; wave 3 needs
-the Phase 3 surface; wave 4 needs the Phase 4 surface. Within a
-wave, migrations are independent.
+Waves gate on hclkit tags, not on each other: wave 1 needs only the
+Phase 1 surface; wave 2 needs the Phase 3 surface; wave 3 needs the
+Phase 4 surface. Within a wave, migrations are independent.
 
 ---
 
-### Wave 1: wiz-access-cli (first adopter)
+### Wave 1: Low-friction adopters
 
 **Requires:** a tagged hclkit release with the Phase 1 surface
 (`Loader`, `Diagnostics`, `fmt`/`validate`/`version`).
 
-The lowest-friction end-to-end validation of the API before anything
-depends on it — a thin `hclsimple` wrapper with no idiosyncrasies.
+Proves the loader API holds up across consumers without churn. Both
+adopters are `gohcl`-with-nil-ctx shapes; `claudelint` goes first as
+the lowest-friction end-to-end validation of the API before anything
+depends on it, and the migrations are otherwise independent.
 
 #### Tasks
 
-- [ ] `wiz-access-cli` PR #7 migrates to `hclkit.New().LoadFile` +
-      `Diagnostics.WriteTo`; capture any API friction as hclkit
-      issues.
-
-#### Success Criteria
-
-- `wiz-access-cli` PR #7 builds and passes its own tests against a
-  tagged hclkit, with no in-tree HCL loader or diagnostic-formatting
-  code remaining (RFC-0001 Phase 1 criterion).
-
----
-
-### Wave 2: Low-friction adopters
-
-**Requires:** the Phase 1 surface (same as wave 1); can run in
-parallel with wave 1.
-
-Proves the loader API holds up across multiple consumers without
-churn. All three adopters are `gohcl`-with-nil-ctx shapes; the three
-migrations are independent and can run in parallel.
-
-#### Tasks
-
-- [ ] Migrate `claudelint`: swap the in-tree loader for
-      `hclkit.New().LoadFile`, delete its diagnostic helpers.
+- [ ] Migrate `claudelint` (first adopter): swap the in-tree loader
+      for `hclkit.New().LoadFile`, delete its diagnostic helpers;
+      capture any API friction as hclkit issues.
 - [ ] Migrate `mcp-go-gen`: same sequence.
-- [ ] Migrate `wiz-go-gen`: same sequence.
 - [ ] Record per-consumer LOC delta for in-tree HCL plumbing (RFC-0001
       targets ≥50% reduction per adopter).
 - [ ] Triage API friction found during the migrations; land any
@@ -132,19 +106,19 @@ migrations are independent and can run in parallel.
 
 #### Success Criteria
 
-- `claudelint`, `mcp-go-gen`, and `wiz-go-gen` all build and pass
-  their tests against a tagged hclkit with no in-tree HCL loader code
-  remaining (RFC-0001 Phase 2 criterion).
+- `claudelint` and `mcp-go-gen` both build and pass their tests
+  against a tagged hclkit with no in-tree HCL loader or
+  diagnostic-formatting code remaining (RFC-0001 Phase 1 + Phase 2
+  criteria).
 - Each migrated consumer's diagnostic output matches hclkit's default
   renderer (no in-tree overrides).
 - In-tree HCL plumbing LOC is down ≥50% in each adopter.
-- The `Loader` API survived three further migrations with zero
-  breaking changes, or every break is recorded with its migration
-  note.
+- The `Loader` API survived the migrations with zero breaking
+  changes, or every break is recorded with its migration note.
 
 ---
 
-### Wave 3: EvalContext and partial-decode consumers
+### Wave 2: EvalContext and partial-decode consumers
 
 **Requires:** a tagged hclkit release with the Phase 3 surface
 (`EvalCtxBuilder`, `funcs`, `varsfile`, `ctytypes`, `partial`,
@@ -178,7 +152,7 @@ divergence.
 
 ---
 
-### Wave 4: Final adopters and the v1.0 gate
+### Wave 3: Final adopters and the v1.0 gate
 
 **Requires:** a tagged hclkit release with the Phase 4 surface
 (validators, `lint --schema`).
@@ -212,9 +186,9 @@ task — RFC-0001's Phase 4 criterion requires these adopters green).
 
 - Tagged hclkit releases per IMPL-0001 phase (per-PR tagging,
   IMPL-0001 OQ-5).
-- Consumer-repo availability: `wiz-access-cli` PR #7 is queued;
-  `fwsync`'s vars-file work is planned, not started. Waves can stall
-  on consumer schedules without blocking IMPL-0001's in-repo phases.
+- Consumer-repo availability: `fwsync`'s vars-file work is planned,
+  not started. Waves can stall on consumer schedules without
+  blocking IMPL-0001's in-repo phases.
 - Gate mechanics per IMPL-0001 OQ-4 (migration branch builds against
   the tag; consumer-repo merge not required).
 

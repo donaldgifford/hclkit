@@ -85,9 +85,8 @@ until Phase 4 completes.
 - Centralized `Config` schemas, plugin/registry systems, YAML support.
 - Schema generation/inference, REPL/eval, LSP, watch mode, color
   theming (each is its own future design discussion).
-- The consumer-repo migrations (`wiz-access-cli`, `claudelint`,
-  `mcp-go-gen`, `wiz-go-gen`, `spt`, `forge`, `fwsync`,
-  `repo-guardian`, `docz`) — moved to
+- The consumer-repo migrations (`claudelint`, `mcp-go-gen`, `spt`,
+  `forge`, `fwsync`, `repo-guardian`, `docz`) — moved to
   [IMPL-0002](0002-hclkit-fleet-adoption.md) so this doc contains
   only in-repo work. RFC-0001's per-phase adopter validation still
   applies; it gates IMPL-0002's waves, not the phases here.
@@ -113,8 +112,7 @@ dependency chain.
 
 Establishes the package layout, the `Loader` API, the `Diagnostics`
 wrapper, and the parse-only CLI surface (`fmt`, `validate`,
-`version`). The first-adopter validation (**`wiz-access-cli`
-PR #7**) is IMPL-0002 wave 1.
+`version`). The first-adopter validation is IMPL-0002 wave 1.
 
 #### Tasks
 
@@ -180,7 +178,7 @@ CLI:
 Release:
 
 - [ ] Tag each merged PR (per-PR tagging, OQ-5); the phase's latest
-      tag is what IMPL-0002 wave 1 (`wiz-access-cli`) pins.
+      tag is what IMPL-0002 wave 1 (`claudelint`/`mcp-go-gen`) pins.
 
 #### Success Criteria
 
@@ -195,17 +193,16 @@ Release:
   exit codes. *(Verified 2026-07-03 — golden-tested + binary smoke
   runs.)*
 - A tagged release exists for the merged Phase 1 PR (OQ-5). The
-  adopter validation (`wiz-access-cli` PR #7, RFC-0001 Phase 1
-  criterion) is IMPL-0002 wave 1 and does not gate the next phase
-  here.
+  adopter validation (RFC-0001 Phase 1 criterion) is IMPL-0002
+  wave 1 and does not gate the next phase here.
 
 ---
 
 ### Phase 2: Low-friction adopters
 
-**Moved to [IMPL-0002](0002-hclkit-fleet-adoption.md) wave 2.** This
+**Moved to [IMPL-0002](0002-hclkit-fleet-adoption.md) wave 1.** This
 phase had no in-repo implementation tasks — it was the
-`claudelint`/`mcp-go-gen`/`wiz-go-gen` migrations plus the feedback
+`claudelint`/`mcp-go-gen` migrations plus the feedback
 loop they trigger (API-friction fixes, new `examples/` shapes). Any
 hclkit changes that feedback produces land as normal PRs here; the
 tracking lives in IMPL-0002. The phase number is retained so
@@ -220,7 +217,7 @@ The widest phase: EvalContext assembly, the standard function bundle,
 the vars-file decode path, refined `ctytypes`, and the
 `pkg/hclkit/partial` surface (the hairiest code in v0). The consumers
 this phase serves (**`spt`**, **`forge`**, **`fwsync`**, and the
-`repo-guardian` `env()` decision point) are IMPL-0002 wave 3.
+`repo-guardian` `env()` decision point) are IMPL-0002 wave 2.
 
 #### Tasks
 
@@ -276,7 +273,7 @@ Benchmarks + release:
       (a forge blueprint, a repo-guardian policy file); point
       `just bench` at them.
 - [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
-      IMPL-0002 wave 3 (`spt`/`forge`/`fwsync`) pins.
+      IMPL-0002 wave 2 (`spt`/`forge`/`fwsync`) pins.
 
 #### Success Criteria
 
@@ -286,7 +283,7 @@ Benchmarks + release:
   new benchmarks; coverage gates still hold.
 - A tagged release exists for the merged Phase 3 PR(s) (OQ-5). The
   adopter validation (`spt`/`forge`/`fwsync`, RFC-0001 Phase 3
-  criterion) is IMPL-0002 wave 3 and does not gate the next phase
+  criterion) is IMPL-0002 wave 2 and does not gate the next phase
   here.
 
 ---
@@ -297,7 +294,7 @@ Ships the two decode-time validators and the schema-driven
 `hclkit lint` subcommand. Ends with the partial-decode test gate,
 the DSL re-trigger evaluation, and the v1.0.0 tag — after which
 SemVer applies. The final two migrations (**`repo-guardian`**,
-**`docz`**) are IMPL-0002 wave 4, which must be green before the
+**`docz`**) are IMPL-0002 wave 3, which must be green before the
 v1.0.0 tag.
 
 #### Tasks
@@ -338,9 +335,9 @@ Release gates:
 - [ ] Sweep the public API for pre-1.0 regrets (naming, option shapes,
       error contracts) — last chance for breaking changes.
 - [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
-      IMPL-0002 wave 4 (`repo-guardian`/`docz`) pins.
+      IMPL-0002 wave 3 (`repo-guardian`/`docz`) pins.
 - [ ] Tag v1.0.0 (`just release v1.0.0`; requires `GPG_FINGERPRINT`
-      in repo Secrets). Waits on IMPL-0002 wave 4 — RFC-0001's
+      in repo Secrets). Waits on IMPL-0002 wave 3 — RFC-0001's
       Phase 4 criterion requires the final adopters green. SemVer
       applies from here.
 
@@ -349,7 +346,7 @@ Release gates:
 - The partial-decode gate passed against the vendored forge and
   repo-guardian fixtures (OQ-6).
 - The DSL re-trigger evaluation is documented (triggered or not).
-- IMPL-0002 wave 4 is green (`repo-guardian` + `docz` against a
+- IMPL-0002 wave 3 is green (`repo-guardian` + `docz` against a
   tagged hclkit; `hclkit lint` in CI for two consumers — RFC-0001
   Phase 4 criterion).
 - v1.0.0 is tagged with signed, SBOM-carrying release artifacts, and

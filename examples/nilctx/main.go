@@ -1,5 +1,5 @@
 // The nilctx example mirrors the simplest surveyed consumer shape
-// (claudelint, wiz-go-gen, mcp-go-gen, wiz-access-cli): a plain
+// (claudelint, mcp-go-gen): a plain
 // struct decode with no EvalContext. The zero-configuration Loader is
 // byte-identical to gohcl.DecodeBody(body, nil, &cfg) — that identity
 // is the Phase 1 adopter bar.

@@ -96,11 +96,11 @@ expose its own debug subcommands.
 ## Background
 
 This design implements RFC-0001's eight first-wave primitives. The
-evidence base is INV-0001's survey of 9 active repos + 1 planned
+evidence base is INV-0001's survey of 7 active repos + 1 planned
 consumer. Two findings drive the v0 shape:
 
-- The **majority cluster** (fwsync, wiz-go-gen, claudelint,
-  mcp-go-gen, wiz-access-cli, webhookd-planned) uses
+- The **majority cluster** (fwsync, claudelint,
+  mcp-go-gen, webhookd-planned) uses
   `gohcl`/`hclsimple` with nil ctx. The Loader API targets this
   cluster first.
 - The **EvalContext cluster** (spt, repo-guardian, forge) plus the
@@ -318,7 +318,7 @@ collects declared block labels by kind, then verifies every referenced
 name resolves. Diagnostics carry the source range of the *reference*
 site, not the target's missing declaration.
 
-Helps `fwsync` and `wiz-access-cli` retrofit their Go-side string
+Helps `fwsync` retrofit its Go-side string
 lookups with position-aware errors.
 
 ### Uniqueness validator
@@ -337,8 +337,7 @@ func NewUniqueValidator(blockKind, attribute string) Validator
 ```
 
 Generic, applies anywhere per-type uniqueness matters (rule IDs in
-repo-guardian, resource labels in wiz-access-cli, `id_prefix` in
-docz).
+repo-guardian, `id_prefix` in docz).
 
 ### Partial-decode helpers (`pkg/hclkit/partial`)
 
@@ -466,9 +465,9 @@ but does not lock the attribute names.
 - **Property-based** for the refined Duration / Enum types — `cty`
   round-trip preservation, decode-time error positions match source
   ranges.
-- **Adopter validation:** Phase 1 success criterion is `wiz-access-cli`
-  PR #7 building and passing its own tests against hclkit. Subsequent
-  phases gate on the same criterion per adopter.
+- **Adopter validation:** Phase 1 success criterion is the first
+  consumer (`claudelint`) building and passing its own tests against
+  hclkit. Subsequent phases gate on the same criterion per adopter.
 - **Partial-decode test pass:** before tagging v1.0, run
   `pkg/hclkit/partial` against real `forge` and `repo-guardian`
   fixtures (blueprints + policy files) end-to-end, including the
@@ -488,7 +487,7 @@ Mirrors RFC-0001's four phases. Per-adopter migration sequence:
 4. If the consumer has refined-primitive needs (Duration, Enum),
    swap in `ctytypes.Duration` / `ctytypes.Enum`.
 5. If the consumer does Go-side cross-block lookups
-   (`fwsync.resolvePolicyRefs`, `wiz-access-cli` label resolution),
+   (`fwsync.resolvePolicyRefs`),
    add `WithValidators(NewRefValidator(...))` and delete the manual
    lookup.
 6. If the consumer uses `hcldec` or manual `hclsyntax`
@@ -513,7 +512,7 @@ and `other` as a free-form slot for the decision-maker to fill in.
 
 ### 1. `fwsync` rule-body grammar
 
-Are the planned wiz / OpenSemgrep rule bodies inlined HCL operators
+Are the planned OpenSemgrep rule bodies inlined HCL operators
 (real DSL-trigger consumer) or HCL transport for an existing semgrep
 YAML/JSON pattern syntax (config wrapper, no trigger contribution)?
 Determines whether `fwsync` counts toward the DSL re-trigger condition.
@@ -655,7 +654,7 @@ This design ships v0 as mechanism-only. The library converts to a
 **library + DSL layer** when **both** RFC-0001 conditions hold:
 
 1. **Two or more of** {`claudelint` config-driven custom rules,
-   `fwsync` wiz/OpenSemgrep rule blocks as inlined HCL ops, evolved
+   `fwsync` OpenSemgrep rule blocks as inlined HCL ops, evolved
    `repo-guardian` rule grammar} have shipped or have stable specs.
 2. Their operator vocabularies overlap meaningfully — i.e. not
    trivially absorbable by HCL expression primitives (`==`, `&&`,
@@ -670,9 +669,9 @@ need a DSL never import it. The trigger evaluation happens at the end
 of Phase 4 and re-runs annually thereafter if not triggered.
 
 **What does not trigger DSL work:** meta-models (the docz pattern),
-declarative resource models (wiz-access-cli), structured-content
-stores (fwsync content side), or codegen configs (wiz-go-gen,
-mcp-go-gen). These are mechanism-library use cases regardless of how
+declarative resource models, structured-content
+stores (fwsync content side), or codegen configs (mcp-go-gen).
+These are mechanism-library use cases regardless of how
 they evolve.
 
 ## References

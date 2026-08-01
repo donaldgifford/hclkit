@@ -43,12 +43,12 @@ because today only one repo has a `subject op expected` grammar.
 ## Problem Statement
 
 INV-0001 surveyed every homelab Go repo that decodes HCL (`forge`,
-`fwsync`, `repo-guardian`, `claudelint`, `mcp-go-gen`, `wiz-go-gen`,
-`spt`, `webhookd`, `wiz-access-cli`) and one planned consumer (`docz`
+`fwsync`, `repo-guardian`, `claudelint`, `mcp-go-gen`, `spt`,
+`webhookd`) and one planned consumer (`docz`
 gaining HCL support, hosting the PST doc-model as a feature). The
 findings:
 
-- **Five or more repos wrap `hclsimple`/`gohcl` with near-identical
+- **Four repos wrap `hclsimple`/`gohcl` with near-identical
   boilerplate** for load → decode → diagnostic formatting. Every new
   repo re-implements the same ~70–300 LOC.
 - **Three repos build ad-hoc EvalContexts** with three different
@@ -63,15 +63,15 @@ findings:
   HCL function in `spt`, as a post-decode allowlist in `repo-guardian`.
   This semantic divergence will calcify if we don't fix it now.
 - **Cross-block references are resolved in Go post-decode** in
-  `fwsync` and `wiz-access-cli` without HCL-position diagnostics.
+  `fwsync` without HCL-position diagnostics.
 - **Vars-file pattern (Terraform-style `.tfvars`)** exists in `forge`
   today, is planned for `fwsync`, and is the likely next addition to
   `repo-guardian` — a 3-consumer shape in formation.
 
 The cost today is concrete: drift between consumers' diagnostic
 formats, behavioral inconsistencies (the `env()` example), and
-re-implementation overhead on every new HCL-using repo (`wiz-access-cli`
-PR #7, `webhookd` IMPL-0004, `docz` HCL support are all queued).
+re-implementation overhead on every new HCL-using repo (`webhookd`
+IMPL-0004 and `docz` HCL support are both queued).
 
 ## Proposed Solution
 
@@ -95,7 +95,7 @@ At the architectural level, `hclkit` v0 ships nine primitives:
 1. **Loader + diagnostic wrapper around `gohcl`/`hclsimple`** — one
    entry point, consistent diagnostic format, position-preserving
    errors. Subsumes the near-duplicate boilerplate in fwsync,
-   wiz-go-gen, claudelint, mcp-go-gen, spt, wiz-access-cli.
+   claudelint, mcp-go-gen, spt.
 2. **EvalContext assembly** — declarative registration of functions and
    variables, with `locals` support. Subsumes the three different
    shapes in spt / repo-guardian / forge.
@@ -114,7 +114,7 @@ At the architectural level, `hclkit` v0 ships nine primitives:
 7. **Cross-block reference validation** — declared verbs with
    target-kind constraints, resolved at decode time with
    position-aware diagnostics. Targets the docz meta-model directly
-   and helps fwsync / wiz-access-cli retrofit Go-side string lookups.
+   and helps fwsync retrofit Go-side string lookups.
 8. **Generic uniqueness validator** — per-type uniqueness on a named
    attribute (e.g. `id_prefix`, label, rule ID).
 9. **`hcldec` target support + `hclsyntax` partial-decode helpers**
@@ -169,15 +169,15 @@ Architectural constraints:
 
 - Land package layout, `Loader` API, diagnostic format. v0 of the
   validator binary (`hclkit fmt`, `hclkit validate` parse-only mode).
-- First consumer: **`wiz-access-cli` PR #7**. It's a thin `hclsimple`
+- First consumer: **`claudelint`**. It's a thin `gohcl`-with-nil-ctx
   wrapper with no idiosyncrasies — lowest-friction path to validate
   the API end-to-end before anything depends on it.
 
 ### Phase 2: Low-friction adopters
 
-- Retrofit **`claudelint`, `mcp-go-gen`, `wiz-go-gen`** — all
-  `gohcl`-with-nil-ctx, all trivial. Confirms the loader API holds up
-  across multiple consumers without churn.
+- Retrofit **`mcp-go-gen`** (and any other `gohcl`-with-nil-ctx
+  consumers that land) — all trivial. Confirms the loader API holds
+  up across multiple consumers without churn.
 
 ### Phase 3: EvalContext, vars-file, refined types, partial-decode
 
@@ -212,14 +212,15 @@ Architectural constraints:
 | `fwsync` rule body turns out to be HCL transport for existing semgrep YAML, not a grammar consumer  | One less data point for the DSL trigger                      | Medium     | Resolve the open question early (see INV-0001 Observation notes) before Phase 3 starts. Document the answer in this RFC's References.                                    |
 | Library's refined Duration type doesn't compose with `gohcl` struct-tag decode cleanly              | Adopters can't use it without `hcldec`                       | Medium     | Validate the gohcl integration in Phase 3 with `spt` before committing the type to v0. Fall back to a validating helper if needed. Less acute now that `hcldec` target support is in v0 — refined types compose cleanly via `hcldec` regardless. |
 | `pkg/hclkit/partial` is the largest in-tree API surface and lands in Phase 3                        | API churn risk concentrates in Phase 3                       | Medium     | Test `partial` against real `forge` and `repo-guardian` fixtures end-to-end before tagging v1.0 (Phase 4 gate). Keep `DecodeSpec` / `Walk` as the low-level surfaces; Loader's `hcldec.Spec` target is the ergonomic path.                       |
-| Adoption stalls — repos prefer their existing in-tree loader because it works                       | Library exists but nobody uses it                            | Low–Medium | Phase 1 ships with `wiz-access-cli` PR #7 as the first integrated consumer; Phase 2 batches three trivial migrations to demonstrate ergonomics.                           |
+| Adoption stalls — repos prefer their existing in-tree loader because it works                       | Library exists but nobody uses it                            | Low–Medium | Phase 1 ships with `claudelint` as the first integrated consumer; Phase 2 batches further trivial migrations to demonstrate ergonomics.                           |
 
 ## Success Criteria
 
-- **Phase 1 complete** when `wiz-access-cli` PR #7 ships using hclkit
+- **Phase 1 complete** when `claudelint` ships using hclkit
   for its loader and diagnostics.
-- **Phase 2 complete** when `claudelint`, `mcp-go-gen`, and `wiz-go-gen`
-  all build against hclkit with no in-tree HCL loader code remaining.
+- **Phase 2 complete** when `mcp-go-gen` (and any remaining nil-ctx
+  consumers) build against hclkit with no in-tree HCL loader code
+  remaining.
 - **Phase 3 complete** when `spt`, `forge`, and at least the `fwsync`
   variables/vars-file work-in-progress build against hclkit, and
   `repo-guardian`'s `env()` semantics match the library's.
@@ -240,7 +241,7 @@ when **both** conditions hold:
 
 1. **Two or more of the following have shipped or have stable
    specs:** `claudelint` config-driven custom rules, `fwsync`
-   wiz/OpenSemgrep rule blocks (as inlined HCL ops, not transport for
+   OpenSemgrep rule blocks (as inlined HCL ops, not transport for
    existing semgrep syntax), evolved `repo-guardian` rule grammar.
 2. **The shipped/spec'd grammars share operator vocabulary** in a way
    that's not trivially trivially absorbable by HCL expression
