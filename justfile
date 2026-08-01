@@ -10,7 +10,6 @@ project_owner     := "donaldgifford"
 go_package        := "github.com/" + project_owner + "/" + project_name
 build_dir         := "build"
 bin_dir           := build_dir + "/bin"
-profile_dir       := build_dir + "/profile"
 coverage_out      := "coverage.out"
 allowed_licenses  := "Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0"
 goimports_local   := "github.com/" + project_owner
@@ -19,6 +18,7 @@ coverage_min      := "55"
 # Version info derived from git; falls back to dev when not in a repo or tag-less.
 commit_hash := `git rev-parse --short HEAD 2>/dev/null || echo unknown`
 version     := `git describe --tags --always --dirty 2>/dev/null || echo dev`
+build_date  := `date -u +%Y-%m-%dT%H:%M:%SZ`
 
 # Default: list recipes
 _default:
@@ -34,7 +34,7 @@ build: build-core
 [group('build')]
 build-core:
     @mkdir -p {{ bin_dir }}
-    @go build -ldflags "-X main.version={{ version }} -X main.commit={{ commit_hash }}" \
+    @go build -ldflags "-X main.version={{ version }} -X main.commit={{ commit_hash }} -X main.date={{ build_date }}" \
         -o {{ bin_dir }}/{{ project_name }} ./cmd/{{ project_name }}
     @echo "✓ Core binaries built"
 
@@ -59,11 +59,6 @@ run: build
 run-local: build
     @{{ bin_dir }}/{{ project_name }}
 
-# Run claudelint against its own repository (dogfood gate)
-[group('run')]
-self-check: build
-    @{{ bin_dir }}/{{ project_name }} run .
-
 # ─── Test ───────────────────────────────────────────────────────────
 
 # Run all tests with the race detector
@@ -80,6 +75,11 @@ test-all: test
 test-pkg pkg:
     @go test -v -race {{ pkg }}
 
+# Run integration tests (build tag: integration)
+[group('test')]
+test-integration:
+    @go test -v -race -tags=integration ./...
+
 # Run tests with a coverage profile written to coverage.out
 [group('test')]
 test-coverage:
@@ -91,10 +91,10 @@ test-report:
     @go test -coverprofile={{ coverage_out }} ./...
     @go tool cover -html={{ coverage_out }}
 
-# Fail if any internal/ package covers less than {{coverage_min}}%
+# Fail if any internal/ or pkg/ package covers less than {{coverage_min}}%
 [group('test')]
 coverage-gate:
-    @go test -cover ./internal/... 2>&1 | awk -v min={{ coverage_min }} '\
+    @go test -cover ./internal/... ./pkg/... 2>&1 | awk -v min={{ coverage_min }} '\
         /coverage:/ { \
             if ($0 ~ /no statements/) next; \
             pct = $0; \
@@ -107,18 +107,10 @@ coverage-gate:
         } \
         END { exit bad }'
 
-# Run engine benchmarks
+# Run benchmarks
 [group('test')]
 bench:
-    @go test -run='^$' -bench=. -benchmem ./internal/engine/...
-
-# Capture pprof profiles for a claudelint run (outputs to build/profile/)
-[group('test')]
-profile: build
-    @mkdir -p {{ profile_dir }}
-    @{{ bin_dir }}/{{ project_name }} run --profile={{ profile_dir }} . || true
-    @echo "✓ Profiles written to {{ profile_dir }}/"
-    @echo "  Inspect with: go tool pprof {{ profile_dir }}/cpu.pprof"
+    @go test -run='^$' -bench=. -benchmem ./...
 
 # ─── Lint & format ─────────────────────────────────────────────────
 

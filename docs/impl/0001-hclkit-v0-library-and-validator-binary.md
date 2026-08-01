@@ -1,7 +1,7 @@
 ---
 id: IMPL-0001
 title: "hclkit v0 library and validator binary"
-status: Draft
+status: In Progress
 author: Donald Gifford
 created: 2026-07-02
 ---
@@ -9,7 +9,7 @@ created: 2026-07-02
 
 # IMPL 0001: hclkit v0 library and validator binary
 
-**Status:** Draft
+**Status:** In Progress
 **Author:** Donald Gifford
 **Date:** 2026-07-02
 
@@ -23,14 +23,12 @@ created: 2026-07-02
     - [Tasks](#tasks)
     - [Success Criteria](#success-criteria)
   - [Phase 2: Low-friction adopters](#phase-2-low-friction-adopters)
+  - [Phase 3: EvalContext, vars-file, refined types, and partial-decode](#phase-3-evalcontext-vars-file-refined-types-and-partial-decode)
     - [Tasks](#tasks-1)
     - [Success Criteria](#success-criteria-1)
-  - [Phase 3: EvalContext, vars-file, refined types, and partial-decode](#phase-3-evalcontext-vars-file-refined-types-and-partial-decode)
+  - [Phase 4: Cross-block validation, the lint binary, and v1.0](#phase-4-cross-block-validation-the-lint-binary-and-v10)
     - [Tasks](#tasks-2)
     - [Success Criteria](#success-criteria-2)
-  - [Phase 4: Cross-block validation, the lint binary, and v1.0](#phase-4-cross-block-validation-the-lint-binary-and-v10)
-    - [Tasks](#tasks-3)
-    - [Success Criteria](#success-criteria-3)
 - [File Changes](#file-changes)
 - [Testing Plan](#testing-plan)
 - [Dependencies](#dependencies)
@@ -41,6 +39,7 @@ created: 2026-07-02
   - [4. Adopter-gate mechanics](#4-adopter-gate-mechanics)
   - [5. Release tagging cadence](#5-release-tagging-cadence)
   - [6. Fixture sourcing for the partial-decode gate](#6-fixture-sourcing-for-the-partial-decode-gate)
+  - [7. hcldec.Spec loader entry point (decide before Phase 3)](#7-hcldecspec-loader-entry-point-decide-before-phase-3)
 - [References](#references)
 <!--toc:end-->
 
@@ -75,10 +74,8 @@ until Phase 4 completes.
 - Repo groundwork the scaffold still needs: HCL/cty dependencies,
   justfile fixes, coverage-gate scope, `main.date` injection,
   CLAUDE.md layout correction.
-- Coordination checkpoints for the per-phase adopter migrations
-  (`wiz-access-cli`, `claudelint`, `mcp-go-gen`, `wiz-go-gen`, `spt`,
-  `forge`, `fwsync`, `repo-guardian`, `docz`). The migration PRs
-  themselves land in the consumer repos.
+- Tagging each merged PR (per OQ-5) so consumer migrations have
+  releases to pin.
 
 ### Out of Scope
 
@@ -88,6 +85,11 @@ until Phase 4 completes.
 - Centralized `Config` schemas, plugin/registry systems, YAML support.
 - Schema generation/inference, REPL/eval, LSP, watch mode, color
   theming (each is its own future design discussion).
+- The consumer-repo migrations (`claudelint`, `mcp-go-gen`, `spt`,
+  `forge`, `fwsync`, `repo-guardian`, `docz`) — moved to
+  [IMPL-0002](0002-hclkit-fleet-adoption.md) so this doc contains
+  only in-repo work. RFC-0001's per-phase adopter validation still
+  applies; it gates IMPL-0002's waves, not the phases here.
 - A container image for the binary (deferred per DESIGN-0001 open
   question 4 until a CI integration asks).
 - The full `hclkit lint` schema specification — Phase 4 ships the
@@ -97,9 +99,12 @@ until Phase 4 completes.
 ## Implementation Phases
 
 Each phase builds on the previous one. A phase is complete when all
-its tasks are checked off and its success criteria are met. Phase 2's
-three adopter migrations are independent and can run in parallel;
-phase ordering elsewhere is ergonomic, not a hard dependency chain.
+its tasks are checked off and its success criteria are met. All
+tasks below are in-repo; the consumer migrations that validate each
+phase are tracked as waves in
+[IMPL-0002](0002-hclkit-fleet-adoption.md), gated on this repo's
+per-PR tags (OQ-5). Phase ordering is ergonomic, not a hard
+dependency chain.
 
 ---
 
@@ -107,122 +112,102 @@ phase ordering elsewhere is ergonomic, not a hard dependency chain.
 
 Establishes the package layout, the `Loader` API, the `Diagnostics`
 wrapper, and the parse-only CLI surface (`fmt`, `validate`,
-`version`). First adopter is **`wiz-access-cli` PR #7** — a thin
-`hclsimple` wrapper with no idiosyncrasies, the lowest-friction
-end-to-end validation of the API before anything depends on it.
+`version`). The first-adopter validation is IMPL-0002 wave 1.
 
 #### Tasks
 
 Repo groundwork:
 
-- [ ] Add `github.com/hashicorp/hcl/v2`, `github.com/zclconf/go-cty`,
+- [x] Add `github.com/hashicorp/hcl/v2`, `github.com/zclconf/go-cty`,
       and `github.com/spf13/cobra` to `go.mod`; run `go mod tidy` and
       `just license-check`.
-- [ ] Create the `pkg/hclkit/` tree per DESIGN-0001's layout; update
+- [x] Create the `pkg/hclkit/` tree per DESIGN-0001's layout; update
       CLAUDE.md's layout/conventions sections (they currently say all
       library code lives under `internal/`, which predates the
       public-API decision in RFC-0001).
-- [ ] Fix claudelint leftovers in the justfile: `self-check` invokes a
+- [x] Fix claudelint leftovers in the justfile: `self-check` invokes a
       nonexistent `run` subcommand, `profile` assumes `run --profile`,
       and `bench` targets `./internal/engine/...` which will not exist.
-- [ ] Extend `just coverage-gate` to cover `pkg/...` (per OQ-2) and add
+- [x] Extend `just coverage-gate` to cover `pkg/...` (per OQ-2) and add
       `examples/` to `.codecov.yml` ignores.
-- [ ] Wire `-X main.date=...` into the justfile and `.goreleaser.yml`
+- [x] Wire `-X main.date=...` into the justfile and `.goreleaser.yml`
       ldflags (closes the CLAUDE.md gotcha; `hclkit version` prints
       version + commit + date per DESIGN-0001).
 
 Library:
 
-- [ ] Implement `Diagnostics` (`pkg/hclkit/diag.go`): wrap
+- [x] Implement `Diagnostics` (`pkg/hclkit/diag.go`): wrap
       `hcl.Diagnostics` with `WriteTo`, `HasErrors`, `Error`, and the
       machine-parseable line prefix (format per OQ-3).
-- [ ] Implement `Loader` (`pkg/hclkit/loader.go`): `New(opts...)`,
+      *Deviation from DESIGN-0001:* `WriteTo` returns
+      `(int64, error)` — govet's stdmethods check requires the
+      `io.WriterTo` shape for that name; the design sketched a bare
+      `error` return.
+- [x] Implement `Loader` (`pkg/hclkit/loader.go`): `New(opts...)`,
       `LoadFile`, `LoadBytes`, and `LoadDir` with lexical-order,
       per-file-override merge (DESIGN-0001 open question 3 decision)
       and a `WithMergeMode(append)` opt-in.
-- [ ] Implement the Phase-1 functional options: `WithEvalContext`,
+- [x] Implement the Phase-1 functional options: `WithEvalContext`,
       `WithFunctions`, `WithVariables`, `WithDiagnosticWriter`
       (`WithVarsFile` lands in Phase 3, `WithValidators` in Phase 4).
-- [ ] Implement `internal/parser` wrappers around `hclparse` /
+- [x] Implement `internal/parser` wrappers around `hclparse` /
       `hclsyntax`.
-- [ ] Implement `internal/testutil`: golden-file helpers with a
+- [x] Implement `internal/testutil`: golden-file helpers with a
       `-update` regeneration flag, fixture loading.
-- [ ] Write unit tests for loader (file/bytes/dir, merge modes, error
+- [x] Write unit tests for loader (file/bytes/dir, merge modes, error
       paths) and golden tests for the diagnostic renderer.
 
 CLI:
 
-- [ ] Restructure `cmd/hclkit/main.go` into `spf13/cobra` subcommand
+- [x] Restructure `cmd/hclkit/main.go` into `spf13/cobra` subcommand
       dispatch (OQ-1); keep it thin — parse flags, call into the
       library.
-- [ ] Implement `hclkit fmt [files...]` via `hclwrite`, with `--check`
+- [x] Implement `hclkit fmt [files...]` via `hclwrite`, with `--check`
       for CI (non-zero exit on unformatted files).
-- [ ] Implement `hclkit validate [files...]` (parse-only; emits hclkit
+- [x] Implement `hclkit validate [files...]` (parse-only; emits hclkit
       diagnostics; non-zero exit on errors).
-- [ ] Implement `hclkit version` (version, commit, date).
-- [ ] Document the reserved flags (`--profile`, `--format`,
+- [x] Implement `hclkit version` (version, commit, date).
+- [x] Document the reserved flags (`--profile`, `--format`,
       `--no-color`, `--schema-stdin`) as reserved/not implemented.
-- [ ] Write golden tests for `fmt --check` and `validate` output and
+- [x] Write golden tests for `fmt --check` and `validate` output and
       exit codes.
-- [ ] Add `examples/nilctx` (the gohcl-with-nil-ctx / claudelint
+- [x] Add `examples/nilctx` (the gohcl-with-nil-ctx / claudelint
       shape) and an integration test exercising it behind
-      `//go:build integration`.
+      `//go:build integration` (`just test-integration`).
 
-Adopter:
+Release:
 
-- [ ] Tag each merged PR (per-PR tagging, OQ-5); `wiz-access-cli`
-      pins the phase's latest tag.
-- [ ] `wiz-access-cli` PR #7 migrates to `hclkit.New().LoadFile` +
-      `Diagnostics.WriteTo` (gate mechanics per OQ-4); capture any API
-      friction as issues here.
+- [ ] Tag each merged PR (per-PR tagging, OQ-5); the phase's latest
+      tag is what IMPL-0002 wave 1 (`claudelint`/`mcp-go-gen`) pins.
 
 #### Success Criteria
 
 - `just ci` (lint + test + build + license-check) passes with the new
-  packages in place.
+  packages in place. *(Verified 2026-07-03 — coverage: pkg/hclkit
+  98.2%, internal/parser 100%, internal/format 91.7%,
+  internal/testutil 55.6%.)*
 - `just coverage-gate` passes at ≥55% for every library package in its
-  (possibly extended, per OQ-2) scope.
+  (possibly extended, per OQ-2) scope. *(Verified 2026-07-03.)*
 - `hclkit fmt --check`, `hclkit validate`, and `hclkit version` behave
   per DESIGN-0001 against the `examples/nilctx` fixtures, with correct
-  exit codes.
-- `wiz-access-cli` PR #7 builds and passes its own tests against a
-  tagged hclkit, with no in-tree HCL loader or diagnostic-formatting
-  code remaining (RFC-0001 Phase 1 criterion).
+  exit codes. *(Verified 2026-07-03 — golden-tested + binary smoke
+  runs.)*
+- A tagged release exists for the merged Phase 1 PR (OQ-5). The
+  adopter validation (RFC-0001 Phase 1 criterion) is IMPL-0002
+  wave 1 and does not gate the next phase here.
 
 ---
 
 ### Phase 2: Low-friction adopters
 
-Proves the loader API holds up across multiple consumers without
-churn. All three adopters are `gohcl`-with-nil-ctx shapes; the three
-migrations are independent and can run in parallel.
-
-#### Tasks
-
-- [ ] Migrate `claudelint`: swap the in-tree loader for
-      `hclkit.New().LoadFile`, delete its diagnostic helpers.
-- [ ] Migrate `mcp-go-gen`: same sequence.
-- [ ] Migrate `wiz-go-gen`: same sequence.
-- [ ] Record per-consumer LOC delta for in-tree HCL plumbing (RFC-0001
-      targets ≥50% reduction per adopter).
-- [ ] Triage API friction found during the migrations; land any
-      breaking fixes now (pre-1.0 breaks are cheapest here, before the
-      Phase 3 surface multiplies consumers).
-- [ ] Extend the `nilctx` integration tests with any consumer shapes
-      the migrations surfaced.
-- [ ] Tag each merged PR (per OQ-5).
-
-#### Success Criteria
-
-- `claudelint`, `mcp-go-gen`, and `wiz-go-gen` all build and pass
-  their tests against a tagged hclkit with no in-tree HCL loader code
-  remaining (RFC-0001 Phase 2 criterion).
-- Each migrated consumer's diagnostic output matches hclkit's default
-  renderer (no in-tree overrides).
-- In-tree HCL plumbing LOC is down ≥50% in each adopter.
-- The `Loader` API survived three further migrations with zero
-  breaking changes, or every break is recorded with its migration
-  note.
+**Moved to [IMPL-0002](0002-hclkit-fleet-adoption.md) wave 1.** This
+phase had no in-repo implementation tasks — it was the
+`claudelint`/`mcp-go-gen` migrations plus the feedback
+loop they trigger (API-friction fixes, new `examples/` shapes). Any
+hclkit changes that feedback produces land as normal PRs here; the
+tracking lives in IMPL-0002. The phase number is retained so
+cross-references (OQ-7, CLAUDE.md, commit history) stay valid; for
+in-repo work, Phase 1 proceeds directly to Phase 3.
 
 ---
 
@@ -230,11 +215,9 @@ migrations are independent and can run in parallel.
 
 The widest phase: EvalContext assembly, the standard function bundle,
 the vars-file decode path, refined `ctytypes`, and the
-`pkg/hclkit/partial` surface (the hairiest code in v0). Adopters:
-**`spt`** (EvalContext + `env()`), **`forge`** (full migration:
-vars-file + `hcldec.Spec` target + late-bound expressions), and
-**`fwsync`**'s planned vars-file work. Also the decision point that
-retires `repo-guardian`'s `applyEnvOverrides` divergence.
+`pkg/hclkit/partial` surface (the hairiest code in v0). The consumers
+this phase serves (**`spt`**, **`forge`**, **`fwsync`**, and the
+`repo-guardian` `env()` decision point) are IMPL-0002 wave 2.
 
 #### Tasks
 
@@ -278,50 +261,41 @@ Partial-decode:
       `hcl.Expression` handles for late-bound attributes.
 - [ ] Implement `partial.Walk(body, schema, fn)` for ordered
       block-kind iteration (locals-first shape).
-- [ ] Add `*hcldec.Spec` target dispatch to
-      `LoadFile`/`LoadBytes`/`LoadDir` (type switch on `target`).
+- [ ] Add `hcldec.Spec` decoding to the Loader — entry-point shape is
+      OQ-7 (the design's type-switch-on-`target` has no return path
+      for the decoded `cty.Value`); resolve before implementing.
 - [ ] Unit tests for `DecodeSpec` retained-expression flows and `Walk`
       ordering; fixtures per OQ-6.
 
-Benchmarks + adopters:
+Benchmarks + release:
 
 - [ ] Add load+decode benchmarks for representative consumer configs
       (a forge blueprint, a repo-guardian policy file); point
       `just bench` at them.
-- [ ] Tag each merged PR (per OQ-5).
-- [ ] `spt` migrates (EvalContext + `env()`; hosts the refined-types
-      spike).
-- [ ] `forge` migrates fully (vars-file + `hcldec.Spec` target +
-      late-bound expressions via `partial`); its in-tree
-      partial-decode helpers are deleted.
-- [ ] `fwsync` vars-file work builds on hclkit.
-- [ ] Decision point: land the library `env()` in `repo-guardian`
-      behind a feature flag; deprecate `applyEnvOverrides` over one
-      release cycle (RFC-0001 risk mitigation).
+- [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
+      IMPL-0002 wave 2 (`spt`/`forge`/`fwsync`) pins.
 
 #### Success Criteria
 
-- `spt`, `forge`, and the `fwsync` vars-file work-in-progress all
-  build and pass tests against a tagged hclkit (RFC-0001 Phase 3
-  criterion).
-- `forge` has no in-tree partial-decode code left; its late-bound
-  expression flow runs through `partial.DecodeSpec`/`ExprMap`.
-- `repo-guardian`'s `env()` semantics match the library's (flag may
-  still be in its deprecation cycle).
 - The gohcl × refined-types spike outcome (refined path or
   validating-helper fallback) is recorded in this doc.
 - Property tests and integration tests pass; `just bench` runs the
   new benchmarks; coverage gates still hold.
+- A tagged release exists for the merged Phase 3 PR(s) (OQ-5). The
+  adopter validation (`spt`/`forge`/`fwsync`, RFC-0001 Phase 3
+  criterion) is IMPL-0002 wave 2 and does not gate the next phase
+  here.
 
 ---
 
 ### Phase 4: Cross-block validation, the lint binary, and v1.0
 
-Ships the two decode-time validators, the schema-driven `hclkit lint`
-subcommand, and the final two migrations (**`repo-guardian`**,
-**`docz`**). Ends with the partial-decode test gate, the DSL
-re-trigger evaluation, and the v1.0.0 tag — after which SemVer
-applies.
+Ships the two decode-time validators and the schema-driven
+`hclkit lint` subcommand. Ends with the partial-decode test gate,
+the DSL re-trigger evaluation, and the v1.0.0 tag — after which
+SemVer applies. The final two migrations (**`repo-guardian`**,
+**`docz`**) are IMPL-0002 wave 3, which must be green before the
+v1.0.0 tag.
 
 #### Tasks
 
@@ -349,36 +323,32 @@ Lint binary:
 - [ ] Golden tests for lint output and exit codes; document the
       schema grammar in the README or docs.
 
-Adopters + release gates:
+Release gates:
 
-- [ ] `repo-guardian` migrates fully: `locals`-first flow on
-      `partial.Walk` + `EvalCtxBuilder.WithLocals`; manual
-      `decodeBody` deleted; `applyEnvOverrides` removed at the end of
-      its deprecation cycle.
-- [ ] `docz` gains HCL support on hclkit, using `RefValidator` /
-      `UniqueValidator` for its meta-model (`decides` refs,
-      `id_prefix` uniqueness).
-- [ ] Wire `hclkit lint` (or `validate`) into CI for at least two
-      consumers.
 - [ ] Run the partial-decode test pass against real `forge` and
       `repo-guardian` fixtures end-to-end, including EvalContext +
-      late-bound expression flows (v1.0 gate; fixtures per OQ-6).
+      late-bound expression flows (v1.0 gate; vendored fixtures per
+      OQ-6).
 - [ ] Evaluate the DSL re-trigger: re-run INV-0001 section C against
       the then-current `claudelint`, `fwsync`, and `repo-guardian`
       rule grammars; record the outcome in RFC-0001's references.
 - [ ] Sweep the public API for pre-1.0 regrets (naming, option shapes,
       error contracts) — last chance for breaking changes.
+- [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
+      IMPL-0002 wave 3 (`repo-guardian`/`docz`) pins.
 - [ ] Tag v1.0.0 (`just release v1.0.0`; requires `GPG_FINGERPRINT`
-      in repo Secrets). SemVer applies from here.
+      in repo Secrets). Waits on IMPL-0002 wave 3 — RFC-0001's
+      Phase 4 criterion requires the final adopters green. SemVer
+      applies from here.
 
 #### Success Criteria
 
-- `repo-guardian` and `docz` both build and pass tests against a
-  tagged hclkit (RFC-0001 Phase 4 criterion).
-- `hclkit lint` runs in CI for at least two consumers.
-- The partial-decode gate passed against real forge and repo-guardian
-  fixtures.
+- The partial-decode gate passed against the vendored forge and
+  repo-guardian fixtures (OQ-6).
 - The DSL re-trigger evaluation is documented (triggered or not).
+- IMPL-0002 wave 3 is green (`repo-guardian` + `docz` against a
+  tagged hclkit; `hclkit lint` in CI for two consumers — RFC-0001
+  Phase 4 criterion).
 - v1.0.0 is tagged with signed, SBOM-carrying release artifacts, and
   the public API is under SemVer.
 
@@ -409,10 +379,10 @@ Adopters + release gates:
 
 ## Testing Plan
 
-- [ ] Unit tests colocated with packages; `just coverage-gate` floor
+- [x] Unit tests colocated with packages; `just coverage-gate` floor
       of 55% per library package (scope per OQ-2); Codecov project
       gate 60%/40% unchanged.
-- [ ] Golden tests for the diagnostic renderer and all CLI output,
+- [x] Golden tests for the diagnostic renderer and all CLI output,
       regenerated via the `-update` flag in `internal/testutil`.
 - [ ] Integration tests behind `//go:build integration` — at minimum
       one end-to-end test per `examples/` pattern (`nilctx`,
@@ -431,11 +401,9 @@ Adopters + release gates:
 - `github.com/hashicorp/hcl/v2` (MPL-2.0 — on the license allow list),
   `github.com/zclconf/go-cty` (MIT), and `github.com/spf13/cobra`
   (Apache-2.0) per OQ-1.
-- Consumer repos and their queued work: `wiz-access-cli` PR #7
-  (Phase 1), `claudelint`/`mcp-go-gen`/`wiz-go-gen` (Phase 2),
-  `spt`/`forge`/`fwsync` vars-file work (Phase 3),
-  `repo-guardian`/`docz` HCL support (Phase 4). Adopter-dependent
-  criteria can stall on consumer-repo availability — see OQ-4.
+- Consumer migrations are tracked in
+  [IMPL-0002](0002-hclkit-fleet-adoption.md); only the v1.0.0 tag
+  (Phase 4) waits on them. Gate mechanics per OQ-4.
 - `GPG_FINGERPRINT` in repo Secrets for signed release tags
   (`just release-local` for signing-free snapshots).
 - DESIGN-0001's six open questions are all decided; this doc inherits
@@ -581,6 +549,38 @@ live?
 > **Decision: a.** Vendor sanitized snapshots into
 > `internal/testutil/fixtures/`, recording the source repo + commit
 > with each refresh.
+
+### 7. `hcldec.Spec` loader entry point (decide before Phase 3)
+
+The Phase 1 architecture review (go-architect, 2026-07-03) found that
+DESIGN-0001's "pass `*hcldec.Spec` as the `target`" dispatch has no
+return path for the decoded value: `Load*` returns only
+`Diagnostics`, and a spec is a schema, not a decode destination —
+`gohcl` targets receive the result in place; a spec cannot. Phase 1
+therefore shipped `decode` with a single `gohcl` arm and an explicit
+invalid-target diagnostic for everything else.
+
+- **a.** _Recommended._ **Dedicated method mirroring
+  `partial.DecodeSpec`:** `LoadSpec(path string, spec hcldec.Spec)
+  (cty.Value, partial.ExprMap, Diagnostics)`. Keeps `target` meaning
+  "pointer that receives the decode" everywhere, and the return shape
+  matches the lower-level surface it wraps.
+- **b.** **Option + value destination:** keep the `Load*` entry
+  points and add `WithSpec(spec)`, with the caller passing a
+  `*cty.Value` target that receives the decoded value in place. One
+  entry point, but `ExprMap` still needs a home.
+- **c.** **Design as written:** type-switch on `target` accepting
+  `*hcldec.Spec` directly, inventing a result-carrying field on
+  `Diagnostics` or a separate results accessor. Preserves the
+  design text at the cost of a muddier calling convention.
+- **other:**
+
+> **Decision: a.** Dedicated `LoadSpec(path, spec) (cty.Value,
+> partial.ExprMap, Diagnostics)` mirroring `partial.DecodeSpec`.
+> Keeps `target` meaning "pointer that receives the decode"
+> everywhere, gives `ExprMap` an explicit home, and avoids growing
+> `Diagnostics` into a result carrier (its error embed is
+> load-bearing for consumer errcheck coverage).
 
 ## References
 

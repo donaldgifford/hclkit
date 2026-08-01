@@ -23,20 +23,23 @@ homelab fleet:
 ## Layout
 
 ```
-cmd/hclkit/             main package — keep thin, parse flags + call into internal/
-internal/               library code; not importable outside this module
+cmd/hclkit/             main package — cobra subcommands, kept thin; logic lives in the library
+pkg/hclkit/             public library API (Loader, Diagnostics, options); consumers import this
+internal/parser/        hclparse wrapper (extension dispatch, file map for diagnostics)
+internal/testutil/      test-only golden/fixture helpers — import from _test.go files only
 docs/                   docz-managed: rfc/ adr/ design/ impl/ plan/ investigation/
 scripts/                repo automation (e.g. labels.sh for GitHub label sync)
 .github/workflows/      CI (ci, security, codeql, trufflehog, release, changelog, license-check, pr-labels, dependabot-severity-label, changelog-regen)
 .goreleaser.yml         release config (multi-arch archives + SBOMs + signed checksums)
 .golangci.yml           lint config (Uber-style; v2 schema)
-.codecov.yml            coverage gate (project target 60%, threshold 40%; ignores main.go/docs/scripts)
+.codecov.yml            coverage gate (project target 60%, threshold 40%; ignores main.go/docs/scripts/examples)
 .docz.yaml              docz config (six doc types, MkDocs wiki integration)
 mkdocs.yml              wiki site config
 cliff.toml              git-cliff config for CHANGELOG.md
 catalog-info.yaml       Backstage entity descriptor
 mise.toml               pinned go + lint/format/security/release toolchain
 justfile                `just` task runner — `just` (no args) for the menu
+Makefile                mirror of the justfile target set (`make help`); keep in sync
 renovate.json5          extends donaldgifford/renovate-config (go + docker + mise + ci)
 .forge-lock.hcl         fleet lock file (homelab-wide)
 ```
@@ -46,7 +49,7 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 ### Build + run
 
 - `just build` — builds to `build/bin/hclkit` with `-ldflags` for
-  `main.version` / `main.commit` (no `main.date` — see Gotchas).
+  `main.version` / `main.commit` / `main.date`.
 - `just run` — builds then runs the resulting binary.
 - `just clean` — removes `build/bin/`, `coverage.out`, and the Go
   build cache.
@@ -55,12 +58,14 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 
 - `just test` — race detector, no coverage.
 - `just test-coverage` — race + writes `coverage.out`.
-- `just coverage-gate` — fails if any `internal/...` package covers
-  less than 55% (the `coverage_min` in the justfile). Tighter than the
-  Codecov project gate (60% w/ 40% threshold).
+- `just coverage-gate` — fails if any `internal/...` or `pkg/...`
+  package covers less than 55% (the `coverage_min` in the justfile).
+  Tighter than the Codecov project gate (60% w/ 40% threshold).
 - `just test-pkg ./internal/foo` — single package.
-- `just bench` — `./internal/engine/...` benchmarks.
-- `just profile` — runs the binary with `--profile=build/profile/`.
+- `just test-integration` — `//go:build integration` tests (the
+  end-to-end consumer-pattern tests under `examples/`).
+- `just bench` — benchmarks across the repo (`./...`). None exist yet;
+  Phase 3 of IMPL-0001 adds load/decode benchmarks.
 
 ### Lint + format
 
@@ -112,9 +117,12 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
   `mise.toml` in the same commit.
 - **No `vendor/`**. Modules are resolved at build time.
 - **`internal/` is a hard wall** — packages there can't be imported by
-  other modules. Use it liberally; promote to a separate module only
-  when something outside this repo actually needs it. Currently only
-  a `.gitkeep` — the library is unwritten.
+  other modules. The public API lives in `pkg/hclkit` (per RFC-0001;
+  hclkit is a fleet library, so a public surface is the point);
+  implementation details stay under `internal/`.
+- **`Diagnostics` implements both `error` and `io.WriterTo`** — the
+  embed makes discarded `Load*` returns trip errcheck in consumers;
+  don't refactor the embed into a wrapped field.
 - **`slog` for structured logs**, not `log` or third-party loggers.
   Default handler is set in `main()` so library code doesn't have to
   thread loggers.
@@ -149,26 +157,21 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 
 ## Gotchas
 
-- **`main.date` is declared but not injected**. `cmd/hclkit/main.go`
-  has `version`, `commit`, `date` vars; both `justfile` and
-  `.goreleaser.yml` only set `main.version` and `main.commit`. Either
-  wire `-X main.date=...` into the build or drop `date` from `main.go`.
 - **`go mod tidy` on first scaffold**: the homelab post-create hook
   runs it. If you skip hooks (`--no-hooks`), run it manually before
   the first `just build` or imports will be unresolved.
 - **`goreleaser` v2 config**: `archives[].format` (v1) is now
   `archives[].formats` (slice). If you copy a pre-v2 config from
   elsewhere, validate with `just release-check`.
-- **No Dockerfile in-repo**. The README and prior CLAUDE.md mentioned
-  one; it was never committed. If you add one, mirror the SBOM/
-  signing behavior of `goreleaser` so release artifacts stay
-  consistent.
+- **No Dockerfile / container image in-repo** — deliberately deferred
+  per DESIGN-0001 open question 4 until a CI integration asks. If you
+  add one, mirror the SBOM/signing behavior of `goreleaser` so
+  release artifacts stay consistent.
 - **Coverage gates differ**: `just coverage-gate` enforces 55% per
-  `internal/...` package; Codecov enforces 60% project-wide w/ 40%
-  threshold. Don't mistake one passing for the other.
-- **Build output lives under `build/bin/`**, not `bin/`. The README
-  quickstart says `bin/hclkit`; that's stale — actual path is
-  `build/bin/hclkit`.
+  `internal/...` / `pkg/...` package; Codecov enforces 60%
+  project-wide w/ 40% threshold. Don't mistake one passing for the
+  other.
+- **Build output lives under `build/bin/`**, not `bin/`.
 - **`coverage.out`, not `coverage.txt`**. The justfile writes
   `coverage.out` and `.gitignore` covers both; CI uploads
   `coverage.out` to Codecov.

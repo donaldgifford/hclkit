@@ -14,6 +14,7 @@ nav:
     - Implementation Plans:
         - Overview: impl/README.md
         - 'IMPL-0001: hclkit v0 library and validator binary': impl/0001-hclkit-v0-library-and-validator-binary.md
+        - 'IMPL-0002: hclkit fleet adoption': impl/0002-hclkit-fleet-adoption.md
     - Investigations:
         - Overview: investigation/README.md
         - 'INV-0001: HCL Config Reuse: Shared Library vs Full DSL': investigation/0001-hcl-config-reuse-shared-library-vs-full-dsl.md
