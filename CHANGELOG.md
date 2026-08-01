@@ -26,6 +26,7 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - *(impl)* Record OQ-7 decision — dedicated LoadSpec entry point
 - *(impl)* Check off Phase 1-scope testing-plan items
 - *(impl)* Split fleet adoption out of IMPL-0001 into IMPL-0002
+- Drop two consumer repos from fleet docs and survey
 
 ### Styling
 
