@@ -43,6 +43,22 @@ func WithVariables(vars map[string]cty.Value) Option {
 	}
 }
 
+// WithVarsFile enables vars-file mode: Load* calls strip the
+// configuration's variable blocks, resolve them against the literal
+// assignments in the file at path, and bind the results as
+// var.<name> for the remaining decode. In vars-file mode the
+// variable block type belongs to the loader — a consumer struct
+// never sees it.
+//
+// Repeatable: files apply in registration order and a later file
+// wins per assignment name. The var binding lives in a child
+// context, so it shadows a WithVariables("var") entry. Vars files
+// are read from disk on every Load call — including LoadBytes,
+// whose main config is otherwise memory-only.
+func WithVarsFile(path string) Option {
+	return func(l *Loader) { l.varsFiles = append(l.varsFiles, path) }
+}
+
 // WithMergeMode sets how LoadDir combines multiple files. The default
 // is MergeOverride.
 func WithMergeMode(m MergeMode) Option {

@@ -255,8 +255,13 @@ Vars-file:
       spec below: validation blocks instead of validate/choices;
       split DecodeVariables / DecodeAssignments / Resolve primitives;
       89.6% coverage.)*
-- [ ] Implement `Loader.LoadVarsFile` → `(*VarsResult, Diagnostics)`
-      and the `WithVarsFile(path)` one-shot option.
+- [x] Implement `Loader.LoadVarsFile` → `(*VarsResult, Diagnostics)`
+      and the `WithVarsFile(path)` one-shot option. *(Two-path
+      `LoadVarsFile(configPath, varsPath)` per the amended spec below;
+      `WithVarsFile` routes all Load\* calls through a shared
+      `loadBodies` pipeline — strip declarations per body, cross-body
+      duplicate detection, later vars file wins per name, `var` bound
+      in a child context so it shadows `WithVariables("var")`.)*
 
 > **Amended spec (Phase 3 architecture review, 2026-08-02).** The
 > design's `Variable{Validate hcl.Expression, Choices []cty.Value}`

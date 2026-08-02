@@ -14,6 +14,7 @@ import (
 	"github.com/zclconf/go-cty/cty/function"
 
 	"github.com/donaldgifford/hclkit/internal/parser"
+	"github.com/donaldgifford/hclkit/pkg/hclkit/varsfile"
 )
 
 // MergeMode controls how LoadDir combines multiple files.
@@ -53,9 +54,14 @@ type Loader struct {
 	evalCtx    *hcl.EvalContext
 	funcs      map[string]function.Function
 	vars       map[string]cty.Value
+	varsFiles  []string
 	mergeMode  MergeMode
 	diagWriter io.Writer
 }
+
+// VarsResult aliases varsfile.VarsResult so LoadVarsFile callers
+// don't need the subpackage import for the common flow.
+type VarsResult = varsfile.VarsResult
 
 // New returns a Loader configured by opts.
 func New(opts ...Option) *Loader {
@@ -73,7 +79,7 @@ func (l *Loader) LoadFile(path string, target any) Diagnostics {
 	p := parser.New()
 	file, diags := p.ParseFile(path)
 	if file != nil && !diags.HasErrors() {
-		diags = diags.Extend(l.decode(file.Body, target))
+		diags = diags.Extend(l.loadBodies(p, []hcl.Body{file.Body}, target))
 	}
 	return l.finish(diags, p.Files())
 }
@@ -85,7 +91,7 @@ func (l *Loader) LoadBytes(filename string, src []byte, target any) Diagnostics 
 	p := parser.New()
 	file, diags := p.ParseBytes(filename, src)
 	if file != nil && !diags.HasErrors() {
-		diags = diags.Extend(l.decode(file.Body, target))
+		diags = diags.Extend(l.loadBodies(p, []hcl.Body{file.Body}, target))
 	}
 	return l.finish(diags, p.Files())
 }
@@ -140,30 +146,145 @@ func (l *Loader) LoadDir(dir string, target any) Diagnostics {
 		return l.finish(diags, p.Files())
 	}
 
-	switch l.mergeMode {
-	case MergeAppend:
-		bodies := make([]hcl.Body, len(files))
-		for i, file := range files {
-			bodies[i] = file.Body
-		}
-		diags = diags.Extend(l.decode(hcl.MergeBodies(bodies), target))
-	default: // MergeOverride
-		// Decode every file even after a decode error so one call
-		// reports every problem in a single CI pass.
-		for _, file := range files {
-			diags = diags.Extend(l.decode(file.Body, target))
-		}
+	bodies := make([]hcl.Body, len(files))
+	for i, file := range files {
+		bodies[i] = file.Body
 	}
-	return l.finish(diags, p.Files())
+	return l.finish(diags.Extend(l.loadBodies(p, bodies, target)), p.Files())
 }
 
-// decode is the single dispatch point every Load* funnels through.
-// Phase 3 grows spec-shaped decoding; today the only arm is gohcl.
-func (l *Loader) decode(body hcl.Body, target any) hcl.Diagnostics {
+// LoadVarsFile resolves the variable declarations in the config at
+// configPath against the assignments in the vars file at varsPath,
+// without decoding the rest of the configuration — the standalone
+// entry point for flows that need Declared before a full Load (e.g.
+// forge's interactive prompting). Paths configured via WithVarsFile
+// are not consulted; varsPath is explicit here.
+//
+// DESIGN-0001 sketched LoadVarsFile(path) with a single path; the
+// two-path signature is a recorded deviation (IMPL-0001) —
+// declarations live in the main config, which a vars-file path
+// alone cannot supply.
+func (l *Loader) LoadVarsFile(configPath, varsPath string) (*VarsResult, Diagnostics) {
+	p := parser.New()
+
+	var diags hcl.Diagnostics
+	configFile, configDiags := p.ParseFile(configPath)
+	diags = diags.Extend(configDiags)
+	varsParsed, varsDiags := p.ParseFile(varsPath)
+	diags = diags.Extend(varsDiags)
+	if configFile == nil || varsParsed == nil || diags.HasErrors() {
+		return nil, l.finish(diags, p.Files())
+	}
+
+	decls, _, declDiags := varsfile.DecodeVariables(configFile.Body)
+	diags = diags.Extend(declDiags)
+	assigns, assignDiags := varsfile.DecodeAssignments(varsParsed.Body)
+	diags = diags.Extend(assignDiags)
+	if diags.HasErrors() {
+		return nil, l.finish(diags, p.Files())
+	}
+
+	result, resolveDiags := varsfile.Resolve(decls, assigns, l.evalContext())
+	return result, l.finish(diags.Extend(resolveDiags), p.Files())
+}
+
+// loadBodies is the shared decode pipeline: assemble the effective
+// EvalContext (resolving and binding vars files when configured),
+// then decode the bodies per the merge mode.
+func (l *Loader) loadBodies(p *parser.Parser, bodies []hcl.Body, target any) hcl.Diagnostics {
+	ctx := l.evalContext()
+
+	var diags hcl.Diagnostics
+	if len(l.varsFiles) > 0 {
+		var varsDiags hcl.Diagnostics
+		bodies, ctx, varsDiags = l.bindVars(p, bodies, ctx)
+		diags = diags.Extend(varsDiags)
+		if diags.HasErrors() {
+			return diags
+		}
+	}
+
+	if l.mergeMode == MergeAppend {
+		return diags.Extend(decodeWith(hcl.MergeBodies(bodies), ctx, target))
+	}
+	// MergeOverride: decode every body even after a decode error so
+	// one call reports every problem in a single CI pass.
+	for _, body := range bodies {
+		diags = diags.Extend(decodeWith(body, ctx, target))
+	}
+	return diags
+}
+
+// bindVars strips variable blocks from bodies, resolves them against
+// the configured vars files, and returns the stripped bodies plus a
+// child context with var bound. Declarations are collected across
+// every body before resolving once — a later file's declaration must
+// be visible while decoding an earlier file — and later vars files
+// win per assignment name. The var binding lives in a child context,
+// so it shadows any WithVariables("var") entry by design.
+func (l *Loader) bindVars(p *parser.Parser, bodies []hcl.Body, ctx *hcl.EvalContext) ([]hcl.Body, *hcl.EvalContext, hcl.Diagnostics) {
+	var diags hcl.Diagnostics
+
+	remains := make([]hcl.Body, len(bodies))
+	decls := make(map[string]varsfile.Variable)
+	for i, body := range bodies {
+		bodyDecls, remain, declDiags := varsfile.DecodeVariables(body)
+		diags = diags.Extend(declDiags)
+		remains[i] = remain
+		for name := range bodyDecls {
+			decl := bodyDecls[name]
+			if prev, ok := decls[name]; ok {
+				declRange := decl.DeclRange
+				diags = diags.Append(&hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Duplicate variable declaration",
+					Detail: fmt.Sprintf("Variable %q was already declared at %s.",
+						name, prev.DeclRange),
+					Subject: &declRange,
+				})
+				continue
+			}
+			decls[name] = decl
+		}
+	}
+
+	assigns := make(map[string]varsfile.Assignment)
+	for _, path := range l.varsFiles {
+		file, fileDiags := p.ParseFile(path)
+		diags = diags.Extend(fileDiags)
+		if file == nil || fileDiags.HasErrors() {
+			continue
+		}
+		fileAssigns, assignDiags := varsfile.DecodeAssignments(file.Body)
+		diags = diags.Extend(assignDiags)
+		maps.Copy(assigns, fileAssigns) // later vars file wins
+	}
+	if diags.HasErrors() {
+		return remains, ctx, diags
+	}
+
+	result, resolveDiags := varsfile.Resolve(decls, assigns, ctx)
+	diags = diags.Extend(resolveDiags)
+	if resolveDiags.HasErrors() {
+		return remains, ctx, diags
+	}
+
+	varCtx := &hcl.EvalContext{}
+	if ctx != nil {
+		varCtx = ctx.NewChild()
+	}
+	varCtx.Variables = map[string]cty.Value{"var": result.Values}
+	return remains, varCtx, diags
+}
+
+// decodeWith is the single dispatch point every Load* funnels
+// through. Phase 3 grows spec-shaped decoding via LoadSpec; the
+// gohcl arm lives here.
+func decodeWith(body hcl.Body, ctx *hcl.EvalContext, target any) hcl.Diagnostics {
 	if diag := checkTarget(target); diag != nil {
 		return hcl.Diagnostics{diag}
 	}
-	return gohcl.DecodeBody(body, l.evalContext(), target)
+	return gohcl.DecodeBody(body, ctx, target)
 }
 
 // checkTarget rejects targets gohcl.DecodeBody would panic on: nil,
