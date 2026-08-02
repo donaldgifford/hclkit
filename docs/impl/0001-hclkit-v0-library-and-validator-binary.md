@@ -302,8 +302,28 @@ Vars-file:
 
 Refined types:
 
-- [ ] Implement `ctytypes.Duration` and `ctytypes.Enum` with
-      HCL-position diagnostics.
+- [x] Implement `ctytypes.Duration` and `ctytypes.Enum` with
+      HCL-position diagnostics. *(Shipped as position-aware helpers —
+      `DecodeDuration(expr, ctx)` / `ValidateDuration(s, subject)` and
+      `Enum(name, values) EnumType` with `DecodeExpr` / `Validate`;
+      98% coverage. See the deviation note below.)*
+
+> **DESIGN-0001 "Refined cty primitives" deviation (2026-08-02).**
+> Neither Duration nor Enum can be a `cty.Type` usable with gohcl
+> struct tags. `gohcl.DecodeBody` derives field types via
+> `gocty.ImpliedType`, which knows only built-in Go kinds — a
+> `time.Duration` field implies `cty.Number` (bare HCL numbers decode
+> as nanoseconds without parsing) and no hook exists to inject a
+> capsule/refined type, so capsule conversion ops never run on the
+> struct-tag path. Per the design's sanctioned fallback, `ctytypes`
+> ships position-aware helpers instead: consumers declare fields as
+> `hcl.Expression` and call `DecodeDuration` / `EnumType.DecodeExpr`,
+> or validate a decoded string via `ValidateDuration` /
+> `EnumType.Validate` with a caller-supplied `hcl.Range`.
+> `Enum(name, values)` returns `ctytypes.EnumType`, not `cty.Type`.
+> A capsule-type representation remains possible for the LoadSpec /
+> hcldec path (capsule conversion works under `convert.Convert`) and
+> is deferred to the gohcl/spt compat spike below.
 - [ ] Spike gohcl struct-tag compatibility against `spt`
       (DESIGN-0001 open question 2 decision); if lossy, fall back to
       `Validate(target)` post-decode helpers without changing the
