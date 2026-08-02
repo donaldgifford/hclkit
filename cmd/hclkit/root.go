@@ -30,6 +30,7 @@ validation, and schema-driven linting.`,
 	root.AddCommand(
 		newFmtCmd(),
 		newValidateCmd(),
+		newLintCmd(),
 		newVersionCmd(info),
 	)
 

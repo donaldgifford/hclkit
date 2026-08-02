@@ -43,6 +43,44 @@ func WithVariables(vars map[string]cty.Value) Option {
 	}
 }
 
+// WithVarsFile enables vars-file mode: Load* calls strip the
+// configuration's variable blocks, resolve them against the literal
+// assignments in the file at path, and bind the results as
+// var.<name> for the remaining decode. In vars-file mode the
+// variable block type belongs to the loader — a consumer struct
+// never sees it.
+//
+// Repeatable: files apply in registration order and a later file
+// wins per assignment name. The var binding lives in a child
+// context, so it shadows a WithVariables("var") entry. Vars files
+// are read from disk on every Load call — including LoadBytes,
+// whose main config is otherwise memory-only.
+func WithVarsFile(path string) Option {
+	return func(l *Loader) { l.varsFiles = append(l.varsFiles, path) }
+}
+
+// Validator inspects parsed file bodies before decode and reports
+// position-aware diagnostics — cross-block reference resolution,
+// uniqueness, and similar structural checks. The validate subpackage
+// provides implementations; any type with this Validate method
+// satisfies the interface structurally.
+//
+// Validators receive every file body as written (in vars-file mode
+// that includes the variable blocks the decode later strips) together
+// with the fully assembled EvalContext, var binding included.
+type Validator interface {
+	Validate(bodies []hcl.Body, ctx *hcl.EvalContext) hcl.Diagnostics
+}
+
+// WithValidators registers validators run by LoadFile, LoadBytes, and
+// LoadDir before decoding. Repeatable and accumulating; validators
+// run in registration order and their diagnostics merge with decode
+// diagnostics (collect-all — validator errors do not stop the
+// decode). LoadSpec and LoadVarsFile do not run validators.
+func WithValidators(vs ...Validator) Option {
+	return func(l *Loader) { l.validators = append(l.validators, vs...) }
+}
+
 // WithMergeMode sets how LoadDir combines multiple files. The default
 // is MergeOverride.
 func WithMergeMode(m MergeMode) Option {

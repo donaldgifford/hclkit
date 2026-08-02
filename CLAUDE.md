@@ -24,7 +24,11 @@ homelab fleet:
 
 ```
 cmd/hclkit/             main package — cobra subcommands, kept thin; logic lives in the library
-pkg/hclkit/             public library API (Loader, Diagnostics, options); consumers import this
+pkg/hclkit/             public library API (Loader, Diagnostics, options, EvalCtxBuilder); consumers import this
+pkg/hclkit/funcs/       std HCL function bundle (case helpers, now, env) — imports only hcl/cty+stdlib
+pkg/hclkit/varsfile/    variable-block decode + vars-file resolution primitives
+pkg/hclkit/ctytypes/    refined decode helpers (Duration, Enum) with HCL-position diagnostics
+pkg/hclkit/partial/     hcldec spec decode w/ retained exprs + ordered block walks
 internal/parser/        hclparse wrapper (extension dispatch, file map for diagnostics)
 internal/testutil/      test-only golden/fixture helpers — import from _test.go files only
 docs/                   docz-managed: rfc/ adr/ design/ impl/ plan/ investigation/
@@ -64,8 +68,10 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 - `just test-pkg ./internal/foo` — single package.
 - `just test-integration` — `//go:build integration` tests (the
   end-to-end consumer-pattern tests under `examples/`).
-- `just bench` — benchmarks across the repo (`./...`). None exist yet;
-  Phase 3 of IMPL-0001 adds load/decode benchmarks.
+- `just bench` — benchmarks across the repo (`./...`). The load/decode
+  benchmarks live in `pkg/hclkit/bench_test.go` over
+  `pkg/hclkit/testdata/bench/` fixtures (forge-blueprint and
+  repo-guardian-policy shapes).
 
 ### Lint + format
 
@@ -87,13 +93,20 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 
 ### Release
 
+- **Releases are label-driven, not manual.** Merging a PR to main
+  fires `release.yml`: `pr-semver-bump` reads the merged PR's semver
+  label, pushes the bumped `v*` tag, and goreleaser publishes
+  multi-arch archives, SBOMs, and a GPG-signed checksum. Every PR
+  must carry exactly one of `major`/`minor`/`patch`/`dont-release`
+  (enforced by the required-labels check); use `dont-release` for
+  docs-only or no-release PRs.
 - `just release-check` — `goreleaser check`.
 - `just release-local` — snapshot build (`--snapshot --skip=publish
   --skip=sign`); artifacts land in `dist/`.
-- `just release v0.1.0` — tag + push. The `release.yml` workflow runs
-  `goreleaser release --clean` on `v*` tags, producing multi-arch
-  archives, SBOMs, and a signed checksum (`GPG_FINGERPRINT` must be
-  set in repo Secrets).
+- `just release v0.1.0` — manual tag + push. **Escape hatch only:**
+  `release.yml` does not fire on tag pushes, so a manual tag
+  publishes nothing and can collide with the next auto-bump. Prefer
+  the label flow.
 
 ### Composite gates
 
@@ -150,8 +163,9 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 - `changelog.yml` / `changelog-regen.yml` — `git-cliff`-driven.
 - `pr-labels.yml` + `.github/labeler.yml` — branch-prefix + path-glob
   labeling. Labels are provisioned via `scripts/labels.sh`.
-- `release.yml` — fires on `v*` tag push, runs `goreleaser release
-  --clean` against `.goreleaser.yml`.
+- `release.yml` — fires on push to main; bumps the version from the
+  merged PR's semver label, pushes the tag, and runs `goreleaser
+  release --clean` against `.goreleaser.yml`.
 - `dependabot-severity-label.yml` — augments Dependabot PRs with
   severity labels (Dependabot config lives in `.github/dependabot.yml`).
 
@@ -175,9 +189,15 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 - **`coverage.out`, not `coverage.txt`**. The justfile writes
   `coverage.out` and `.gitignore` covers both; CI uploads
   `coverage.out` to Codecov.
-- **goreleaser signing requires `GPG_FINGERPRINT`** in repo Secrets;
-  releases will fail otherwise. Use `just release-local` for a
+- **goreleaser signing requires `GPG_PRIVATE_KEY` + `GPG_FINGERPRINT`**
+  in repo Secrets; the release job fails at key import otherwise
+  (both set as of 2026-08-01). Use `just release-local` for a
   signing-free snapshot.
+- **Committing a regenerated `CHANGELOG.md` on a branch can conflict
+  with main's auto-sync commit** — and a conflicted PR silently stops
+  triggering `pull_request` workflows (no runs, no failures). If PR
+  checks vanish, check mergeability first; merge main in and re-run
+  `git-cliff -o CHANGELOG.md` to resolve.
 - **PR labels must exist before `pr-labels.yml` can apply them**.
   Run `scripts/labels.sh` once per repo (or after editing
   `.github/labeler.yml`) to provision them via `gh`.

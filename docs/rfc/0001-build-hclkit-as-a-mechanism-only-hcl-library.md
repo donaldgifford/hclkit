@@ -262,3 +262,17 @@ commit to that answer.
   HCL toolkit but each defines its own language on top; none share
   schemas. Strong existence proof for "centralize mechanism, not
   schema."
+- DSL re-trigger evaluation (2026-08-02, IMPL-0001 Phase 4): **not
+  triggered** — 0 of 3 trigger candidates ship an aligned operator
+  vocabulary. `claudelint` schema v1 rule blocks remain
+  enable/severity/options overrides of Go-registered rules, not
+  config-expressed logic (`internal/config/schema.go`). `fwsync`
+  shipped `sast_policy` blocks, but they are HCL *transport* —
+  metadata plus refs to external OpenSemgrep YAML rulesets
+  (`pkg/framework/hcl.go`, `policy.go`) — resolving INV-0001's open
+  question in the direction that removes fwsync from the trigger set.
+  `repo-guardian` evolved (absent check mode, `when` rule gating) but
+  its assertion vocabulary is unchanged and still the sole
+  `subject op expected` grammar (`internal/policy/types.go`). C6
+  (DSL tax) remains unanswered. Next re-run: when claudelint custom
+  rules or HCL-native fwsync rule bodies reach a stable spec.

@@ -21,11 +21,44 @@ A `Makefile` mirroring the justfile target set is also available
 hclkit version                # version + commit + build date
 hclkit fmt [files...]         # format via hclwrite; --check for CI
 hclkit validate [files...]    # parse-only validation, GCC-style diagnostics
-hclkit lint --schema=x.hcl    # (Phase 4) schema-driven lint
+hclkit lint --schema=x.hcl    # schema-driven lint
 ```
 
 Subcommand rollout tracks
 [IMPL-0001](docs/impl/0001-hclkit-v0-library-and-validator-binary.md).
+
+### Lint schema grammar
+
+The schema passed to `hclkit lint --schema` is itself HCL, with four
+top-level kinds (attribute names may still evolve before v1.0):
+
+```hcl
+block "doctype" {          # permitted top-level block kind
+  labels = 1               # exact label count (default 0)
+}
+
+attribute "id_prefix" {    # attribute rule for one block kind
+  block    = "doctype"     # kind the rule applies to
+  required = true          # default false
+  type     = string        # typeexpr; literal values must convert
+}
+
+reference {                # cross-block reference resolution
+  verb        = "decides"  # attribute holding the reference(s)
+  target_kind = "doctype"  # kind whose labels are referenced
+}
+
+unique {                   # per-kind attribute uniqueness
+  block_kind = "doctype"
+  attribute  = "id_prefix"
+}
+```
+
+Block kinds are only enforced when the schema declares at least one
+`block` rule. Lint evaluates without variables or functions in scope,
+so only literal attribute values are type-checked; `reference` and
+`unique` map onto the `pkg/hclkit/validate` validators, so findings
+carry real source positions (per-element for list references).
 
 ### Reserved flags
 

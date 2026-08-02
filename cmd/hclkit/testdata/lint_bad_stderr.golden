@@ -1,0 +1,49 @@
+testdata/lint_bad.hcl:10:1: error: Wrong label count
+Error: Wrong label count
+
+  on testdata/lint_bad.hcl line 10, in doctype "unlabeled" "extra":
+  10: doctype "unlabeled" "extra" {
+
+Block kind "doctype" takes 1 label(s); this block has 2.
+
+testdata/lint_bad.hcl:14:1: error: Missing required attribute
+Error: Missing required attribute
+
+  on testdata/lint_bad.hcl line 14, in doctype "bare":
+  14: doctype "bare" {}
+
+Blocks of kind "doctype" require attribute "id_prefix".
+
+testdata/lint_bad.hcl:17:14: error: Invalid attribute type
+Error: Invalid attribute type
+
+  on testdata/lint_bad.hcl line 17, in settings:
+  17:   max_open = "ten"
+
+Attribute "max_open" on "settings" blocks must be number: a number is required.
+
+testdata/lint_bad.hcl:20:1: error: Unknown block kind
+Error: Unknown block kind
+
+  on testdata/lint_bad.hcl line 20, in mystery:
+  20: mystery {}
+
+Block kind "mystery" is not declared in the schema.
+
+testdata/lint_bad.hcl:3:16: error: Reference to undeclared doctype
+Error: Reference to undeclared doctype
+
+  on testdata/lint_bad.hcl line 3, in doctype "rfc":
+   3:   decides   = ["nope"]
+
+No doctype block named "nope" is declared in the loaded configuration.
+
+testdata/lint_bad.hcl:7:15: error: Duplicate doctype id_prefix
+Error: Duplicate doctype id_prefix
+
+  on testdata/lint_bad.hcl line 7, in doctype "memo":
+   7:   id_prefix = "RFC"
+
+Value "RFC" was already used at testdata/lint_bad.hcl:2,15-20.
+
+Error: lint failed

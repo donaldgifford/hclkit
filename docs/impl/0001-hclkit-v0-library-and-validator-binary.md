@@ -177,8 +177,9 @@ CLI:
 
 Release:
 
-- [ ] Tag each merged PR (per-PR tagging, OQ-5); the phase's latest
+- [x] Tag each merged PR (per-PR tagging, OQ-5); the phase's latest
       tag is what IMPL-0002 wave 1 (`claudelint`/`mcp-go-gen`) pins.
+      *(v0.1.0 auto-tagged on the Phase 1 PR merge, 2026-08-01.)*
 
 #### Success Criteria
 
@@ -223,55 +224,188 @@ this phase serves (**`spt`**, **`forge`**, **`fwsync`**, and the
 
 EvalContext + functions:
 
-- [ ] Implement `EvalCtxBuilder` (`pkg/hclkit/evalctx.go`):
+- [x] Implement `EvalCtxBuilder` (`pkg/hclkit/evalctx.go`):
       `NewEvalCtx`, `WithStdFuncs`, `WithFunc`, `WithVar`,
       `WithLocals(body)`, `Build` — `WithLocals` mirrors
       repo-guardian's `decodeLocals` so that migration is near-1:1.
-- [ ] Implement `pkg/hclkit/funcs`: `env(name)` (configurable env map,
+      *Deviation from DESIGN-0001:* `Build` returns
+      `(*hcl.EvalContext, hcl.Diagnostics)` — locals evaluation is
+      fallible and happens at Build (deferred, so `With*` order can't
+      shadow the std bundle). Locals are single-pass per
+      repo-guardian semantics: they see the builder's vars/funcs but
+      not sibling locals; verify no repo-guardian config relies on
+      cross-local refs during its migration (IMPL-0002 wave 3).
+      Empty builder builds a literal nil context (Loader
+      nil-identity preserved).
+- [x] Implement `pkg/hclkit/funcs`: `env(name)` (configurable env map,
       empty string for missing keys — the canonical `env()`),
       `snakeCase`/`camelCase`/`pascalCase`/`kebabCase` (lifted from
       forge), `now(layout)` (UTC, not memoized across loads).
-- [ ] Unit tests for builder composition and every bundled function.
+      *Note:* the HCL-visible names keep forge's camelCase convention
+      and are frozen at v0 (config-file surface); `env` takes a
+      `lookup func(string) string` (nil → `os.Getenv`) rather than a
+      map — same semantics, no environ snapshot.
+- [x] Unit tests for builder composition and every bundled function.
 
 Vars-file:
 
-- [ ] Implement `pkg/hclkit/varsfile`: `variable` block decode
+- [x] Implement `pkg/hclkit/varsfile`: `variable` block decode
       (`type`, `default`, `validate`, `choices`), assignment-file
-      parsing, binding as `var.<name>`.
-- [ ] Implement `Loader.LoadVarsFile` → `(*VarsResult, Diagnostics)`
-      and the `WithVarsFile(path)` one-shot option.
-- [ ] Add `examples/envfunc` (spt shape) and `examples/varsfile`
-      (forge shape) with integration tests.
+      parsing, binding as `var.<name>`. *(Implemented per the amended
+      spec below: validation blocks instead of validate/choices;
+      split DecodeVariables / DecodeAssignments / Resolve primitives;
+      89.6% coverage.)*
+- [x] Implement `Loader.LoadVarsFile` → `(*VarsResult, Diagnostics)`
+      and the `WithVarsFile(path)` one-shot option. *(Two-path
+      `LoadVarsFile(configPath, varsPath)` per the amended spec below;
+      `WithVarsFile` routes all Load\* calls through a shared
+      `loadBodies` pipeline — strip declarations per body, cross-body
+      duplicate detection, later vars file wins per name, `var` bound
+      in a child context so it shadows `WithVariables("var")`.)*
+
+> **Amended spec (Phase 3 architecture review, 2026-08-02).** The
+> design's `Variable{Validate hcl.Expression, Choices []cty.Value}`
+> is the legacy forge shape forge itself deprecated (RFC-0003 /
+> IMPL-0009: Terraform-style `validation { condition, error_message }`
+> blocks; `choices`/`validate` removed from its schema). Implement:
+> **(1)** `varsfile` exposes split primitives — `DecodeVariables(body)`
+> → declarations + `Remain` (via `PartialContent`), assignment-file
+> parsing, and a resolve step (defaults → conversion → validations,
+> collect-all); `Loader.LoadVarsFile(configPath, varsPath)` is the
+> two-path convenience (deviation: single-path can't produce
+> `Declared` — declarations live in the main config).
+> **(2)** `Variable{Name, Type, Default, Validations []Validation
+> {Condition hcl.Expression, ErrorMessage string, DeclRange},
+> Description, DeclRange}`; `Choices` dropped; types via
+> `ext/typeexpr.Type` (`any` rejected — matches forge's vartype).
+> Conditions reference `var.<name>`, evaluated in a child of the
+> loader ctx with `var` bound and nil Functions (fallthrough reuses
+> the existing flattening).
+> **(3)** Vars files are literals-only (forge IMPL-0008 OQ-1;
+> loosening later is compatible). Extension dispatch inherits the
+> loader's `.json` rule. `WithVarsFile` is repeatable/accumulating,
+> later files win (forge `--var-file` compat).
+> **(4)** Loader flow: strip `variable` blocks via `PartialContent`
+> only when vars-file mode is active, decode the `Remain`; `LoadDir`
+> collects declarations across all files before resolving once;
+> vars-file binding wins over `WithVariables("var")`; one parser
+> instance across main + vars files so snippets render.
+> **(5)** Diagnostics: undeclared assignment → error at the vars-file
+> attr `NameRange`; declared-no-value-no-default → error at the
+> declaration `DefRange`; conversion failure → error at the
+> assignment expr range; validations run only over resolved vars.
+- [x] Add `examples/envfunc` (spt shape) and `examples/varsfile`
+      (forge shape) with integration tests. *(envfunc pins the Unix
+      unset-env-is-"" semantics; varsfile covers the WithVarsFile
+      decode, a validation-block failure surfacing its error_message,
+      and the standalone LoadVarsFile Declared flow.)*
 
 Refined types:
 
-- [ ] Implement `ctytypes.Duration` and `ctytypes.Enum` with
-      HCL-position diagnostics.
-- [ ] Spike gohcl struct-tag compatibility against `spt`
+- [x] Implement `ctytypes.Duration` and `ctytypes.Enum` with
+      HCL-position diagnostics. *(Shipped as position-aware helpers —
+      `DecodeDuration(expr, ctx)` / `ValidateDuration(s, subject)` and
+      `Enum(name, values) EnumType` with `DecodeExpr` / `Validate`;
+      98% coverage. See the deviation note below.)*
+
+> **DESIGN-0001 "Refined cty primitives" deviation (2026-08-02).**
+> Neither Duration nor Enum can be a `cty.Type` usable with gohcl
+> struct tags. `gohcl.DecodeBody` derives field types via
+> `gocty.ImpliedType`, which knows only built-in Go kinds — a
+> `time.Duration` field implies `cty.Number` (bare HCL numbers decode
+> as nanoseconds without parsing) and no hook exists to inject a
+> capsule/refined type, so capsule conversion ops never run on the
+> struct-tag path. Per the design's sanctioned fallback, `ctytypes`
+> ships position-aware helpers instead: consumers declare fields as
+> `hcl.Expression` and call `DecodeDuration` / `EnumType.DecodeExpr`,
+> or validate a decoded string via `ValidateDuration` /
+> `EnumType.Validate` with a caller-supplied `hcl.Range`.
+> `Enum(name, values)` returns `ctytypes.EnumType`, not `cty.Type`.
+> A capsule-type representation remains possible for the LoadSpec /
+> hcldec path (capsule conversion works under `convert.Convert`) and
+> is deferred to the gohcl/spt compat spike below.
+- [x] Spike gohcl struct-tag compatibility against `spt`
       (DESIGN-0001 open question 2 decision); if lossy, fall back to
       `Validate(target)` post-decode helpers without changing the
       consumer API shape. Record the outcome in this doc.
-- [ ] Property-based tests: cty round-trip preservation, decode-error
-      positions match source ranges.
+
+> **Spike outcome (2026-08-02, `TestSptShapeSpike` in
+> `pkg/hclkit/ctytypes`).** The `hcl.Expression`-field pattern is
+> **compatible** with spt's real config shapes (nested unlabeled
+> blocks, labeled blocks, everything `,optional` — verified against
+> spt `internal/config/types.go` + `durations.go`): source ranges
+> survive gohcl decode through labeled nested blocks, so a bad
+> `cadence` inside `watch "broken" {}` anchors at its real
+> file:line instead of spt's hand-built field-path strings. Two
+> findings shaped the helpers: **(1)** gohcl does *not* leave an
+> absent optional `hcl.Expression` field nil — it assigns a static
+> null expression anchored at the body's `MissingItemRange`; so
+> **(2)** `DecodeDuration` / `EnumType.DecodeExpr` treat nil *or
+> null* as absent → zero value, no diagnostics (Terraform's
+> null-is-unset convention), which matches spt's
+> `parseOptionalDuration("")` fallback semantics exactly. Absence
+> that should error is expressed by dropping `,optional` from the
+> tag, keeping gohcl's own required-attribute diagnostic. No
+> capsule-type work needed for the gohcl path.
+- [x] Property-based tests: cty round-trip preservation, decode-error
+      positions match source ranges. *(Go-native fuzz targets in
+      `ctytypes/property_test.go` — duration String() round trip,
+      HCL-source round trip with position assertions under padding,
+      enum membership/suggestion invariants, constructor dedup/order
+      invariants. Seed corpus runs in normal `go test`; explored
+      ~14M execs locally with `-fuzz`, no failures.)*
 
 Partial-decode:
 
-- [ ] Implement `partial.DecodeSpec(body, spec, ctx)` returning
+- [x] Implement `partial.DecodeSpec(body, spec, ctx)` returning
       `(cty.Value, ExprMap, Diagnostics)` with retained
       `hcl.Expression` handles for late-bound attributes.
-- [ ] Implement `partial.Walk(body, schema, fn)` for ordered
+- [x] Implement `partial.Walk(body, schema, fn)` for ordered
       block-kind iteration (locals-first shape).
-- [ ] Add `hcldec.Spec` decoding to the Loader — entry-point shape is
+- [x] Add `hcldec.Spec` decoding to the Loader — entry-point shape is
       OQ-7 (the design's type-switch-on-`target` has no return path
       for the decoded `cty.Value`); resolve before implementing.
-- [ ] Unit tests for `DecodeSpec` retained-expression flows and `Walk`
-      ordering; fixtures per OQ-6.
+      *(Resolved earlier as OQ-7 option a; shipped as
+      `Loader.LoadSpec(path, spec, retain...)` in `loadspec.go`.)*
+- [x] Unit tests for `DecodeSpec` retained-expression flows and `Walk`
+      ordering; fixtures per OQ-6. *(Unit tests in `partial` — 100%
+      coverage — plus loader-level tests incl. a forge-shaped
+      Walk-then-DecodeSpec composition and vars-file interplay. The
+      vendored forge/repo-guardian fixture gate stays a Phase 4
+      task.)*
+
+> **Partial-decode deviations from DESIGN-0001 (architecture review,
+> 2026-08-02).** **(a)** `DecodeSpec` gains variadic
+> `retain ...string` — hcldec has no expression-retaining spec and the
+> spec's implied schema can't name late-bound attrs, so the caller
+> does; `ExprMap` keys are flat per-body attribute names. Nested
+> retention (forge's `condition.when`) composes via `Walk` +
+> per-block `DecodeSpec`, replacing the sketched dotted-path reading
+> (dotted keys collide across repeated blocks). A retain name that
+> collides with a spec attribute is an error; an absent retained
+> attr is just missing from the map. **(b)** `partial` returns
+> `hcl.Diagnostics` (subpackage cycle guard, varsfile precedent);
+> wrapping happens at the Loader boundary. **(c)** Per OQ-7, the
+> dedicated `LoadSpec(path, spec, retain...)` entry point replaces
+> the sketched type-switch on `target`; `LoadBytesSpec`/`LoadDirSpec`
+> are deferred until a consumer asks. Vars-file mode applies to
+> `LoadSpec` exactly as to `LoadFile` (strip + bind before the spec
+> decode). **(d)** `Walk` is strict (`body.Content`): unknown
+> blocks/attrs error and nothing is visited; kinds visit in
+> `schema.Blocks` order, blocks within a kind in source order;
+> callback diagnostics are collected and the walk continues.
 
 Benchmarks + release:
 
-- [ ] Add load+decode benchmarks for representative consumer configs
+- [x] Add load+decode benchmarks for representative consumer configs
       (a forge blueprint, a repo-guardian policy file); point
-      `just bench` at them.
+      `just bench` at them. *(`pkg/hclkit/bench_test.go` over
+      `testdata/bench/` fixtures — full forge flow ~200µs/op,
+      repo-guardian policy ~81µs/op, vars-file resolve ~70µs/op on
+      Apple M5 Max. go-performance checkpoint passed: no structural
+      issues; the forge flow's inherent 2× parse (LoadVarsFile +
+      LoadFile) noted as fine for a startup path, revisit only on a
+      measured consumer ask.)*
 - [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
       IMPL-0002 wave 2 (`spt`/`forge`/`fwsync`) pins.
 
@@ -279,12 +413,18 @@ Benchmarks + release:
 
 - The gohcl × refined-types spike outcome (refined path or
   validating-helper fallback) is recorded in this doc.
+  *(Verified 2026-08-02: spike-outcome blockquote above —
+  validating-helper path on `hcl.Expression` fields.)*
 - Property tests and integration tests pass; `just bench` runs the
   new benchmarks; coverage gates still hold.
+  *(Verified 2026-08-02: `go test -race ./...`,
+  `just test-integration`, `just bench`, and `just coverage-gate`
+  all green; ctytypes/partial at 100%, varsfile 89.6%.)*
 - A tagged release exists for the merged Phase 3 PR(s) (OQ-5). The
   adopter validation (`spt`/`forge`/`fwsync`, RFC-0001 Phase 3
   criterion) is IMPL-0002 wave 2 and does not gate the next phase
-  here.
+  here. *(Pending merge — auto-tags on the Phase 3 PR merge via the
+  semver label, same as Phase 1's v0.1.0.)*
 
 ---
 
@@ -301,39 +441,97 @@ v1.0.0 tag.
 
 Validators:
 
-- [ ] Define the `Validator` interface and wire `WithValidators(...)`
+- [x] Define the `Validator` interface and wire `WithValidators(...)`
       into the Loader decode path.
-- [ ] Implement `validate.NewRefValidator(verb, targetKind)` —
+- [x] Implement `validate.NewRefValidator(verb, targetKind)` —
       collects declared block labels by kind, verifies every
       referenced name resolves, diagnostics anchored at the
       *reference* site.
-- [ ] Implement `validate.NewUniqueValidator(blockKind, attribute)`.
-- [ ] Unit tests: resolution across files (`LoadDir`), missing
+- [x] Implement `validate.NewUniqueValidator(blockKind, attribute)`.
+- [x] Unit tests: resolution across files (`LoadDir`), missing
       targets, duplicate detection, diagnostic positions.
+      *(validate at 97.2% coverage; LoadDir integration under both
+      merge modes; per-element anchors asserted to file:line:col.)*
+
+> **Validator deviations from DESIGN-0001 (architecture review,
+> 2026-08-02).** **(1)** The `Validator` interface lives in
+> `pkg/hclkit` (`Validate(bodies []hcl.Body, ctx *hcl.EvalContext)
+> hcl.Diagnostics`); constructors return `*RefValidator` /
+> `*UniqueValidator`, not `Validator` — the validate subpackage
+> can't name `hclkit.Validator` under the hcl/cty-only import rule;
+> structural typing preserves the contract (compile-time pinned in
+> tests). **(2)** Validation is native-syntax only: enumerating
+> arbitrary block types requires `*hclsyntax.Body`, so JSON bodies
+> are skipped silently. Validators therefore receive the *raw parsed
+> bodies* (pre-variable-strip — `PartialContent` remains aren't
+> hclsyntax) with the fully assembled ctx, var binding included.
+> **(3)** References resolve from the `Verb` attribute in blocks of
+> *any* kind plus root attrs (fwsync's cross-kind `rule{set=...}`
+> shape), not just `TargetKind` blocks. Syntactic lists anchor
+> per-element; evaluated lists/sets/tuples anchor at the attribute
+> expression. Eval failures/null/unknown are skipped (decode reports
+> those). **(4)** Validators run pre-decode inside `loadBodies`,
+> collect-all with decode diags; `LoadSpec`/`LoadVarsFile` excluded
+> from v0 validation.
 
 Lint binary:
 
-- [ ] Implement the minimal lint-schema grammar: `block`, `attribute`,
+- [x] Implement the minimal lint-schema grammar: `block`, `attribute`,
       `reference`, `unique` top-level kinds with required/optional
       attributes and refined-type references (attribute names may
       still evolve; full spec deferred per DESIGN-0001 open
-      question 5).
-- [ ] Implement `hclkit lint --schema=schema.hcl [files...]` mapping
-      schema declarations onto the library validators.
-- [ ] Golden tests for lint output and exit codes; document the
-      schema grammar in the README or docs.
+      question 5). *(Grammar lives in `internal/lintschema` —
+      deliberately internal so pre-1.0 attribute-name changes aren't
+      breaking; the schema file is decoded by hclkit's own Loader.
+      `attribute.type` takes a typeexpr checked by conversion on
+      literal values only — lint has no eval context.)*
+- [x] Implement `hclkit lint --schema=schema.hcl [files...]` mapping
+      schema declarations onto the library validators. *(`reference`
+      → `validate.RefValidator`, `unique` → `validate.UniqueValidator`,
+      `block`/`attribute` → an internal structure validator; block
+      kinds enforced only when at least one `block` rule exists.)*
+- [x] Golden tests for lint output and exit codes; document the
+      schema grammar in the README or docs. *(Golden covers all six
+      finding kinds with anchors; grammar documented in README and
+      the subcommand's long help.)*
 
 Release gates:
 
-- [ ] Run the partial-decode test pass against real `forge` and
+- [x] Run the partial-decode test pass against real `forge` and
       `repo-guardian` fixtures end-to-end, including EvalContext +
       late-bound expression flows (v1.0 gate; vendored fixtures per
-      OQ-6).
-- [ ] Evaluate the DSL re-trigger: re-run INV-0001 section C against
+      OQ-6). *(`pkg/hclkit/partialgate_test.go` over
+      `internal/testutil/fixtures/` snapshots — forge blueprint
+      `83e3789`, repo-guardian guardian-full `eb451e1`, provenance in
+      the fixtures README. Covers eager decode + Walk + per-block
+      DecodeSpec with retained `when`/template expressions evaluated
+      against a late-assembled ctx, ordered kind walk over 12 real
+      rule blocks, and a ctytypes duration decode at a real source
+      position. Note: the forge fixture uses forge's legacy variable
+      grammar and deliberately does not go through varsfile — that
+      migration is RFC-0003 on forge's side.)*
+- [x] Evaluate the DSL re-trigger: re-run INV-0001 section C against
       the then-current `claudelint`, `fwsync`, and `repo-guardian`
       rule grammars; record the outcome in RFC-0001's references.
-- [ ] Sweep the public API for pre-1.0 regrets (naming, option shapes,
+      *(2026-08-02: **not triggered**, 0 of 3 — claudelint rules are
+      still Go-registered with config overrides; fwsync's sast_policy
+      blocks are HCL transport for external YAML rulesets, resolving
+      INV-0001's open question and removing fwsync from the trigger
+      set; repo-guardian's assertion vocabulary is unchanged.
+      Recorded in RFC-0001 References.)*
+- [x] Sweep the public API for pre-1.0 regrets (naming, option shapes,
       error contracts) — last chance for breaking changes.
+      *(Swept 2026-08-02 via `go doc` over all six packages plus a
+      go-style review pass: no breaking changes needed. Constructors
+      (`New`/`NewEvalCtx`/`NewDiagnostics`/`NewRefValidator`/
+      `NewUniqueValidator`/`Enum`), option shapes (all `With*`,
+      repeatable ones documented), and error contracts (subpackages
+      return `hcl.Diagnostics`, Loader boundary wraps into
+      `Diagnostics` implementing error + io.WriterTo) are consistent.
+      One staleness fix (root doc now lists validate). Non-breaking
+      internal tidiness deferred from the review — shared
+      duplicate-decl diag construction, an applyVarsFile helper — can
+      land any time; they don't touch the public surface.)*
 - [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
       IMPL-0002 wave 3 (`repo-guardian`/`docz`) pins.
 - [ ] Tag v1.0.0 (`just release v1.0.0`; requires `GPG_FINGERPRINT`
@@ -384,17 +582,19 @@ Release gates:
       gate 60%/40% unchanged.
 - [x] Golden tests for the diagnostic renderer and all CLI output,
       regenerated via the `-update` flag in `internal/testutil`.
-- [ ] Integration tests behind `//go:build integration` — at minimum
+- [x] Integration tests behind `//go:build integration` — at minimum
       one end-to-end test per `examples/` pattern (`nilctx`,
       `envfunc`, `varsfile`).
-- [ ] Table-driven tests for merge modes, option combinations, and
+- [x] Table-driven tests for merge modes, option combinations, and
       every bundled function.
-- [ ] Property-based tests for `Duration`/`Enum` round-trips and
+- [x] Property-based tests for `Duration`/`Enum` round-trips and
       diagnostic positions.
-- [ ] Benchmarks for load+decode of representative consumer configs,
+- [x] Benchmarks for load+decode of representative consumer configs,
       wired to `just bench`.
-- [ ] Partial-decode test pass on real forge + repo-guardian fixtures
-      before tagging v1.0 (Phase 4 gate).
+- [x] Partial-decode test pass on real forge + repo-guardian fixtures
+      before tagging v1.0 (Phase 4 gate). *(Hermetic in-repo tests
+      over vendored OQ-6 snapshots; runs in every CI pass, not just
+      at tag time.)*
 
 ## Dependencies
 
