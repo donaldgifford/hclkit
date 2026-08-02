@@ -46,9 +46,20 @@ func (e EnumType) Values() []string { return slices.Clone(e.values) }
 // DecodeExpr evaluates expr against ctx and validates the result is
 // in the set. Failures return "" and diagnostics anchored at the
 // expression.
+//
+// A nil expr or a null value is an absent optional attribute — gohcl
+// assigns absent optional hcl.Expression fields a static null
+// expression — and decodes to "" with no diagnostics rather than a
+// membership check on the empty string, matching the Terraform
+// null-is-unset convention; mark the attribute required in the
+// struct tag when absence should error.
 func (e EnumType) DecodeExpr(expr hcl.Expression, ctx *hcl.EvalContext) (string, hcl.Diagnostics) {
+	if expr == nil {
+		return "", nil
+	}
+
 	val, diags := expr.Value(ctx)
-	if diags.HasErrors() {
+	if diags.HasErrors() || val.IsNull() {
 		return "", diags
 	}
 

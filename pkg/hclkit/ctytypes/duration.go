@@ -14,9 +14,19 @@ import (
 // non-string value, or an unparseable duration — return a zero
 // duration and diagnostics anchored at the expression. Negative
 // durations are allowed; policy belongs to the consumer.
+//
+// A nil expr or a null value is an absent optional attribute — gohcl
+// assigns absent optional hcl.Expression fields a static null
+// expression — and decodes to zero with no diagnostics, matching the
+// Terraform null-is-unset convention; mark the attribute required in
+// the struct tag when absence should error.
 func DecodeDuration(expr hcl.Expression, ctx *hcl.EvalContext) (time.Duration, hcl.Diagnostics) {
+	if expr == nil {
+		return 0, nil
+	}
+
 	val, diags := expr.Value(ctx)
-	if diags.HasErrors() {
+	if diags.HasErrors() || val.IsNull() {
 		return 0, diags
 	}
 
@@ -48,9 +58,10 @@ func ValidateDuration(s string, subject hcl.Range) (time.Duration, hcl.Diagnosti
 	return d, nil
 }
 
-// stringValue reduces val to a known, non-null string, or explains
-// why it can't with a diagnostic anchored at subject. noun names the
-// value in Detail text ("Duration", "Value").
+// stringValue reduces a known non-null val to a string, or explains
+// why it can't with a diagnostic anchored at subject. Callers handle
+// null before calling (null means absent). noun names the value in
+// Detail text ("Duration", "Value").
 func stringValue(val cty.Value, subject hcl.Range, summary, noun string) (string, hcl.Diagnostics) {
 	fail := func(detail string) hcl.Diagnostics {
 		return hcl.Diagnostics{{
@@ -64,9 +75,6 @@ func stringValue(val cty.Value, subject hcl.Range, summary, noun string) (string
 	converted, err := convert.Convert(val, cty.String)
 	if err != nil {
 		return "", fail(fmt.Sprintf("%s must be a string; got %s.", noun, val.Type().FriendlyName()))
-	}
-	if converted.IsNull() {
-		return "", fail(fmt.Sprintf("%s must not be null.", noun))
 	}
 	if !converted.IsKnown() {
 		return "", fail(fmt.Sprintf("%s must be known at decode time.", noun))

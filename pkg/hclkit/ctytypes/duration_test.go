@@ -80,11 +80,6 @@ func TestDecodeDurationDiagnostics(t *testing.T) {
 			src:        `v = ["30s"]`,
 			wantDetail: "Duration must be a string",
 		},
-		{
-			name:       "null",
-			src:        `v = null`,
-			wantDetail: "Duration must not be null",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,6 +95,19 @@ func TestDecodeDurationDiagnostics(t *testing.T) {
 				t.Errorf("DecodeDuration(%s) Subject = %v, want anchored in test.hcl line 1", tt.src, subj)
 			}
 		})
+	}
+}
+
+// TestDecodeDurationNullIsAbsent pins the null-is-unset convention:
+// gohcl assigns absent optional expression fields a static null
+// expression, so null decodes to zero with no diagnostics.
+func TestDecodeDurationNullIsAbsent(t *testing.T) {
+	got, diags := DecodeDuration(exprFor(t, "v = null"), nil)
+	if diags.HasErrors() {
+		t.Fatalf("DecodeDuration(null) diags = %s, want none", diags)
+	}
+	if got != 0 {
+		t.Errorf("DecodeDuration(null) = %v, want 0", got)
 	}
 }
 

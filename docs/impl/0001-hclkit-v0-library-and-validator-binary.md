@@ -324,10 +324,29 @@ Refined types:
 > A capsule-type representation remains possible for the LoadSpec /
 > hcldec path (capsule conversion works under `convert.Convert`) and
 > is deferred to the gohcl/spt compat spike below.
-- [ ] Spike gohcl struct-tag compatibility against `spt`
+- [x] Spike gohcl struct-tag compatibility against `spt`
       (DESIGN-0001 open question 2 decision); if lossy, fall back to
       `Validate(target)` post-decode helpers without changing the
       consumer API shape. Record the outcome in this doc.
+
+> **Spike outcome (2026-08-02, `TestSptShapeSpike` in
+> `pkg/hclkit/ctytypes`).** The `hcl.Expression`-field pattern is
+> **compatible** with spt's real config shapes (nested unlabeled
+> blocks, labeled blocks, everything `,optional` — verified against
+> spt `internal/config/types.go` + `durations.go`): source ranges
+> survive gohcl decode through labeled nested blocks, so a bad
+> `cadence` inside `watch "broken" {}` anchors at its real
+> file:line instead of spt's hand-built field-path strings. Two
+> findings shaped the helpers: **(1)** gohcl does *not* leave an
+> absent optional `hcl.Expression` field nil — it assigns a static
+> null expression anchored at the body's `MissingItemRange`; so
+> **(2)** `DecodeDuration` / `EnumType.DecodeExpr` treat nil *or
+> null* as absent → zero value, no diagnostics (Terraform's
+> null-is-unset convention), which matches spt's
+> `parseOptionalDuration("")` fallback semantics exactly. Absence
+> that should error is expressed by dropping `,optional` from the
+> tag, keeping gohcl's own required-attribute diagnostic. No
+> capsule-type work needed for the gohcl path.
 - [ ] Property-based tests: cty round-trip preservation, decode-error
       positions match source ranges.
 

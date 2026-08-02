@@ -111,9 +111,10 @@ func TestEnumDecodeExprTypeAndNull(t *testing.T) {
 		t.Errorf("DecodeExpr(list) diags = %q, want type error", diags.Error())
 	}
 
-	_, diags = e.DecodeExpr(exprFor(t, "v = null"), nil)
-	if !diags.HasErrors() || !strings.Contains(diags.Error(), "Value must not be null") {
-		t.Errorf("DecodeExpr(null) diags = %q, want null error", diags.Error())
+	// Null is absent, not a membership miss on "".
+	s, diags := e.DecodeExpr(exprFor(t, "v = null"), nil)
+	if diags.HasErrors() || s != "" {
+		t.Errorf(`DecodeExpr(null) = (%q, %s), want ("", no diags)`, s, diags.Error())
 	}
 
 	ctx := &hcl.EvalContext{Variables: map[string]cty.Value{
