@@ -228,10 +228,14 @@ EvalContext + functions:
       `NewEvalCtx`, `WithStdFuncs`, `WithFunc`, `WithVar`,
       `WithLocals(body)`, `Build` — `WithLocals` mirrors
       repo-guardian's `decodeLocals` so that migration is near-1:1.
-- [ ] Implement `pkg/hclkit/funcs`: `env(name)` (configurable env map,
+- [x] Implement `pkg/hclkit/funcs`: `env(name)` (configurable env map,
       empty string for missing keys — the canonical `env()`),
       `snakeCase`/`camelCase`/`pascalCase`/`kebabCase` (lifted from
       forge), `now(layout)` (UTC, not memoized across loads).
+      *Note:* the HCL-visible names keep forge's camelCase convention
+      and are frozen at v0 (config-file surface); `env` takes a
+      `lookup func(string) string` (nil → `os.Getenv`) rather than a
+      map — same semantics, no environ snapshot.
 - [ ] Unit tests for builder composition and every bundled function.
 
 Vars-file:
