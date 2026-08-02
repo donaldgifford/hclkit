@@ -27,7 +27,8 @@
 //     sets) with HCL-position diagnostics.
 //   - partial: hcldec spec decoding with retained expressions and
 //     ordered block-kind walks; Loader.LoadSpec is the entry point.
+//   - validate: decode-time cross-block validators (reference
+//     resolution, uniqueness), registered via WithValidators.
 //
-// Decode-time validators arrive in a later phase; see DESIGN-0001 in
-// the repository's docs tree.
+// See DESIGN-0001 in the repository's docs tree for the rationale.
 package hclkit

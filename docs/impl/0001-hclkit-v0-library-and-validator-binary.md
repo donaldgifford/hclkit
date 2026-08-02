@@ -519,8 +519,19 @@ Release gates:
       INV-0001's open question and removing fwsync from the trigger
       set; repo-guardian's assertion vocabulary is unchanged.
       Recorded in RFC-0001 References.)*
-- [ ] Sweep the public API for pre-1.0 regrets (naming, option shapes,
+- [x] Sweep the public API for pre-1.0 regrets (naming, option shapes,
       error contracts) — last chance for breaking changes.
+      *(Swept 2026-08-02 via `go doc` over all six packages plus a
+      go-style review pass: no breaking changes needed. Constructors
+      (`New`/`NewEvalCtx`/`NewDiagnostics`/`NewRefValidator`/
+      `NewUniqueValidator`/`Enum`), option shapes (all `With*`,
+      repeatable ones documented), and error contracts (subpackages
+      return `hcl.Diagnostics`, Loader boundary wraps into
+      `Diagnostics` implementing error + io.WriterTo) are consistent.
+      One staleness fix (root doc now lists validate). Non-breaking
+      internal tidiness deferred from the review — shared
+      duplicate-decl diag construction, an applyVarsFile helper — can
+      land any time; they don't touch the public surface.)*
 - [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
       IMPL-0002 wave 3 (`repo-guardian`/`docz`) pins.
 - [ ] Tag v1.0.0 (`just release v1.0.0`; requires `GPG_FINGERPRINT`
