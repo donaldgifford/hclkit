@@ -497,10 +497,19 @@ Lint binary:
 
 Release gates:
 
-- [ ] Run the partial-decode test pass against real `forge` and
+- [x] Run the partial-decode test pass against real `forge` and
       `repo-guardian` fixtures end-to-end, including EvalContext +
       late-bound expression flows (v1.0 gate; vendored fixtures per
-      OQ-6).
+      OQ-6). *(`pkg/hclkit/partialgate_test.go` over
+      `internal/testutil/fixtures/` snapshots — forge blueprint
+      `83e3789`, repo-guardian guardian-full `eb451e1`, provenance in
+      the fixtures README. Covers eager decode + Walk + per-block
+      DecodeSpec with retained `when`/template expressions evaluated
+      against a late-assembled ctx, ordered kind walk over 12 real
+      rule blocks, and a ctytypes duration decode at a real source
+      position. Note: the forge fixture uses forge's legacy variable
+      grammar and deliberately does not go through varsfile — that
+      migration is RFC-0003 on forge's side.)*
 - [ ] Evaluate the DSL re-trigger: re-run INV-0001 section C against
       the then-current `claudelint`, `fwsync`, and `repo-guardian`
       rule grammars; record the outcome in RFC-0001's references.
@@ -565,8 +574,10 @@ Release gates:
       diagnostic positions.
 - [x] Benchmarks for load+decode of representative consumer configs,
       wired to `just bench`.
-- [ ] Partial-decode test pass on real forge + repo-guardian fixtures
-      before tagging v1.0 (Phase 4 gate).
+- [x] Partial-decode test pass on real forge + repo-guardian fixtures
+      before tagging v1.0 (Phase 4 gate). *(Hermetic in-repo tests
+      over vendored OQ-6 snapshots; runs in every CI pass, not just
+      at tag time.)*
 
 ## Dependencies
 
