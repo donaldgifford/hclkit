@@ -347,8 +347,13 @@ Refined types:
 > that should error is expressed by dropping `,optional` from the
 > tag, keeping gohcl's own required-attribute diagnostic. No
 > capsule-type work needed for the gohcl path.
-- [ ] Property-based tests: cty round-trip preservation, decode-error
-      positions match source ranges.
+- [x] Property-based tests: cty round-trip preservation, decode-error
+      positions match source ranges. *(Go-native fuzz targets in
+      `ctytypes/property_test.go` — duration String() round trip,
+      HCL-source round trip with position assertions under padding,
+      enum membership/suggestion invariants, constructor dedup/order
+      invariants. Seed corpus runs in normal `go test`; explored
+      ~14M execs locally with `-fuzz`, no failures.)*
 
 Partial-decode:
 
