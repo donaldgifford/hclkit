@@ -3,6 +3,36 @@
 All notable changes to this project are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/).
+## [unreleased]
+
+### Features
+
+- *(funcs)* Add standard function bundle (env, case helpers, now)
+- *(hclkit)* Add EvalCtxBuilder with deferred locals evaluation
+- *(varsfile)* Add variable declaration decode and resolution
+- *(hclkit)* Wire vars-file mode into the Loader
+- *(examples)* Add envfunc (spt shape) and varsfile (forge shape) examples
+- *(ctytypes)* Add Duration and Enum decode helpers with HCL-position diagnostics
+- *(ctytypes)* Record gohcl spt compat spike; treat nil/null expressions as absent
+- *(partial)* Add DecodeSpec/Walk and Loader.LoadSpec per OQ-7
+- *(validate)* Add RefValidator/UniqueValidator and WithValidators wiring
+- *(cli)* Add hclkit lint --schema with the minimal v0 schema grammar
+
+### Documentation
+
+- *(impl)* Check off Phase 1 per-PR tag task (v0.1.0)
+- *(claude)* Document label-driven release flow
+- *(impl)* Amend vars-file spec from Phase 3 architecture review
+- Phase-end pass for IMPL-0001 Phase 3
+- *(rfc)* Record the DSL re-trigger evaluation — not triggered
+- Record the pre-1.0 API sweep — no breaking changes needed
+
+### Testing
+
+- *(ctytypes)* Add property-based fuzz targets for Duration and Enum
+- *(bench)* Add load+decode benchmarks for forge and repo-guardian shapes
+- *(partial)* Add the v1.0 partial-decode gate over vendored consumer fixtures
+
 ## [0.1.0] - 2026-08-01
 
 ### Features
