@@ -406,8 +406,9 @@ Benchmarks + release:
       issues; the forge flow's inherent 2× parse (LoadVarsFile +
       LoadFile) noted as fine for a startup path, revisit only on a
       measured consumer ask.)*
-- [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
-      IMPL-0002 wave 2 (`spt`/`forge`/`fwsync`) pins.
+- [x] Tag each merged PR (per OQ-5); the phase's latest tag is what
+      IMPL-0002 wave 2 (`spt`/`forge`/`fwsync`) pins. *(v0.2.0
+      auto-tagged and released on the PR #3 merge, 2026-08-02.)*
 
 #### Success Criteria
 
@@ -423,8 +424,8 @@ Benchmarks + release:
 - A tagged release exists for the merged Phase 3 PR(s) (OQ-5). The
   adopter validation (`spt`/`forge`/`fwsync`, RFC-0001 Phase 3
   criterion) is IMPL-0002 wave 2 and does not gate the next phase
-  here. *(Pending merge — auto-tags on the Phase 3 PR merge via the
-  semver label, same as Phase 1's v0.1.0.)*
+  here. *(Verified 2026-08-02: v0.2.0 auto-tagged and released on
+  the PR #3 merge.)*
 
 ---
 
@@ -532,8 +533,10 @@ Release gates:
       internal tidiness deferred from the review — shared
       duplicate-decl diag construction, an applyVarsFile helper — can
       land any time; they don't touch the public surface.)*
-- [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
-      IMPL-0002 wave 3 (`repo-guardian`/`docz`) pins.
+- [x] Tag each merged PR (per OQ-5); the phase's latest tag is what
+      IMPL-0002 wave 3 (`repo-guardian`/`docz`) pins. *(Phase 4
+      shipped in the same PR as Phase 3; v0.2.0 is the phase's
+      latest tag, 2026-08-02.)*
 - [ ] Tag v1.0.0 (`just release v1.0.0`; requires `GPG_FINGERPRINT`
       in repo Secrets). Waits on IMPL-0002 wave 3 — RFC-0001's
       Phase 4 criterion requires the final adopters green. SemVer
