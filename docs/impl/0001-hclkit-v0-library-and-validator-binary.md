@@ -224,10 +224,19 @@ this phase serves (**`spt`**, **`forge`**, **`fwsync`**, and the
 
 EvalContext + functions:
 
-- [ ] Implement `EvalCtxBuilder` (`pkg/hclkit/evalctx.go`):
+- [x] Implement `EvalCtxBuilder` (`pkg/hclkit/evalctx.go`):
       `NewEvalCtx`, `WithStdFuncs`, `WithFunc`, `WithVar`,
       `WithLocals(body)`, `Build` — `WithLocals` mirrors
       repo-guardian's `decodeLocals` so that migration is near-1:1.
+      *Deviation from DESIGN-0001:* `Build` returns
+      `(*hcl.EvalContext, hcl.Diagnostics)` — locals evaluation is
+      fallible and happens at Build (deferred, so `With*` order can't
+      shadow the std bundle). Locals are single-pass per
+      repo-guardian semantics: they see the builder's vars/funcs but
+      not sibling locals; verify no repo-guardian config relies on
+      cross-local refs during its migration (IMPL-0002 wave 3).
+      Empty builder builds a literal nil context (Loader
+      nil-identity preserved).
 - [x] Implement `pkg/hclkit/funcs`: `env(name)` (configurable env map,
       empty string for missing keys — the canonical `env()`),
       `snakeCase`/`camelCase`/`pascalCase`/`kebabCase` (lifted from
@@ -236,7 +245,7 @@ EvalContext + functions:
       and are frozen at v0 (config-file surface); `env` takes a
       `lookup func(string) string` (nil → `os.Getenv`) rather than a
       map — same semantics, no environ snapshot.
-- [ ] Unit tests for builder composition and every bundled function.
+- [x] Unit tests for builder composition and every bundled function.
 
 Vars-file:
 
