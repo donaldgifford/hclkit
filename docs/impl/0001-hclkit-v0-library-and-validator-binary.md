@@ -254,6 +254,38 @@ Vars-file:
       parsing, binding as `var.<name>`.
 - [ ] Implement `Loader.LoadVarsFile` → `(*VarsResult, Diagnostics)`
       and the `WithVarsFile(path)` one-shot option.
+
+> **Amended spec (Phase 3 architecture review, 2026-08-02).** The
+> design's `Variable{Validate hcl.Expression, Choices []cty.Value}`
+> is the legacy forge shape forge itself deprecated (RFC-0003 /
+> IMPL-0009: Terraform-style `validation { condition, error_message }`
+> blocks; `choices`/`validate` removed from its schema). Implement:
+> **(1)** `varsfile` exposes split primitives — `DecodeVariables(body)`
+> → declarations + `Remain` (via `PartialContent`), assignment-file
+> parsing, and a resolve step (defaults → conversion → validations,
+> collect-all); `Loader.LoadVarsFile(configPath, varsPath)` is the
+> two-path convenience (deviation: single-path can't produce
+> `Declared` — declarations live in the main config).
+> **(2)** `Variable{Name, Type, Default, Validations []Validation
+> {Condition hcl.Expression, ErrorMessage string, DeclRange},
+> Description, DeclRange}`; `Choices` dropped; types via
+> `ext/typeexpr.Type` (`any` rejected — matches forge's vartype).
+> Conditions reference `var.<name>`, evaluated in a child of the
+> loader ctx with `var` bound and nil Functions (fallthrough reuses
+> the existing flattening).
+> **(3)** Vars files are literals-only (forge IMPL-0008 OQ-1;
+> loosening later is compatible). Extension dispatch inherits the
+> loader's `.json` rule. `WithVarsFile` is repeatable/accumulating,
+> later files win (forge `--var-file` compat).
+> **(4)** Loader flow: strip `variable` blocks via `PartialContent`
+> only when vars-file mode is active, decode the `Remain`; `LoadDir`
+> collects declarations across all files before resolving once;
+> vars-file binding wins over `WithVariables("var")`; one parser
+> instance across main + vars files so snippets render.
+> **(5)** Diagnostics: undeclared assignment → error at the vars-file
+> attr `NameRange`; declared-no-value-no-default → error at the
+> declaration `DefRange`; conversion failure → error at the
+> assignment expr range; validations run only over resolved vars.
 - [ ] Add `examples/envfunc` (spt shape) and `examples/varsfile`
       (forge shape) with integration tests.
 
