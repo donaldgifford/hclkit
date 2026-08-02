@@ -510,9 +510,15 @@ Release gates:
       position. Note: the forge fixture uses forge's legacy variable
       grammar and deliberately does not go through varsfile — that
       migration is RFC-0003 on forge's side.)*
-- [ ] Evaluate the DSL re-trigger: re-run INV-0001 section C against
+- [x] Evaluate the DSL re-trigger: re-run INV-0001 section C against
       the then-current `claudelint`, `fwsync`, and `repo-guardian`
       rule grammars; record the outcome in RFC-0001's references.
+      *(2026-08-02: **not triggered**, 0 of 3 — claudelint rules are
+      still Go-registered with config overrides; fwsync's sast_policy
+      blocks are HCL transport for external YAML rulesets, resolving
+      INV-0001's open question and removing fwsync from the trigger
+      set; repo-guardian's assertion vocabulary is unchanged.
+      Recorded in RFC-0001 References.)*
 - [ ] Sweep the public API for pre-1.0 regrets (naming, option shapes,
       error contracts) — last chance for breaking changes.
 - [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
