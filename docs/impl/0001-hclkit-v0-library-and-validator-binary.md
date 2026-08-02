@@ -476,15 +476,24 @@ Validators:
 
 Lint binary:
 
-- [ ] Implement the minimal lint-schema grammar: `block`, `attribute`,
+- [x] Implement the minimal lint-schema grammar: `block`, `attribute`,
       `reference`, `unique` top-level kinds with required/optional
       attributes and refined-type references (attribute names may
       still evolve; full spec deferred per DESIGN-0001 open
-      question 5).
-- [ ] Implement `hclkit lint --schema=schema.hcl [files...]` mapping
-      schema declarations onto the library validators.
-- [ ] Golden tests for lint output and exit codes; document the
-      schema grammar in the README or docs.
+      question 5). *(Grammar lives in `internal/lintschema` —
+      deliberately internal so pre-1.0 attribute-name changes aren't
+      breaking; the schema file is decoded by hclkit's own Loader.
+      `attribute.type` takes a typeexpr checked by conversion on
+      literal values only — lint has no eval context.)*
+- [x] Implement `hclkit lint --schema=schema.hcl [files...]` mapping
+      schema declarations onto the library validators. *(`reference`
+      → `validate.RefValidator`, `unique` → `validate.UniqueValidator`,
+      `block`/`attribute` → an internal structure validator; block
+      kinds enforced only when at least one `block` rule exists.)*
+- [x] Golden tests for lint output and exit codes; document the
+      schema grammar in the README or docs. *(Golden covers all six
+      finding kinds with anchors; grammar documented in README and
+      the subcommand's long help.)*
 
 Release gates:
 
