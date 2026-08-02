@@ -3,6 +3,12 @@
 All notable changes to this project are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/).
+## [unreleased]
+
+### Documentation
+
+- *(impl)* Check off the Phase 3/4 tag tasks — v0.2.0 released
+
 ## [0.2.0] - 2026-08-02
 
 ### Features
