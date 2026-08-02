@@ -357,16 +357,43 @@ Refined types:
 
 Partial-decode:
 
-- [ ] Implement `partial.DecodeSpec(body, spec, ctx)` returning
+- [x] Implement `partial.DecodeSpec(body, spec, ctx)` returning
       `(cty.Value, ExprMap, Diagnostics)` with retained
       `hcl.Expression` handles for late-bound attributes.
-- [ ] Implement `partial.Walk(body, schema, fn)` for ordered
+- [x] Implement `partial.Walk(body, schema, fn)` for ordered
       block-kind iteration (locals-first shape).
-- [ ] Add `hcldec.Spec` decoding to the Loader — entry-point shape is
+- [x] Add `hcldec.Spec` decoding to the Loader — entry-point shape is
       OQ-7 (the design's type-switch-on-`target` has no return path
       for the decoded `cty.Value`); resolve before implementing.
-- [ ] Unit tests for `DecodeSpec` retained-expression flows and `Walk`
-      ordering; fixtures per OQ-6.
+      *(Resolved earlier as OQ-7 option a; shipped as
+      `Loader.LoadSpec(path, spec, retain...)` in `loadspec.go`.)*
+- [x] Unit tests for `DecodeSpec` retained-expression flows and `Walk`
+      ordering; fixtures per OQ-6. *(Unit tests in `partial` — 100%
+      coverage — plus loader-level tests incl. a forge-shaped
+      Walk-then-DecodeSpec composition and vars-file interplay. The
+      vendored forge/repo-guardian fixture gate stays a Phase 4
+      task.)*
+
+> **Partial-decode deviations from DESIGN-0001 (architecture review,
+> 2026-08-02).** **(a)** `DecodeSpec` gains variadic
+> `retain ...string` — hcldec has no expression-retaining spec and the
+> spec's implied schema can't name late-bound attrs, so the caller
+> does; `ExprMap` keys are flat per-body attribute names. Nested
+> retention (forge's `condition.when`) composes via `Walk` +
+> per-block `DecodeSpec`, replacing the sketched dotted-path reading
+> (dotted keys collide across repeated blocks). A retain name that
+> collides with a spec attribute is an error; an absent retained
+> attr is just missing from the map. **(b)** `partial` returns
+> `hcl.Diagnostics` (subpackage cycle guard, varsfile precedent);
+> wrapping happens at the Loader boundary. **(c)** Per OQ-7, the
+> dedicated `LoadSpec(path, spec, retain...)` entry point replaces
+> the sketched type-switch on `target`; `LoadBytesSpec`/`LoadDirSpec`
+> are deferred until a consumer asks. Vars-file mode applies to
+> `LoadSpec` exactly as to `LoadFile` (strip + bind before the spec
+> decode). **(d)** `Walk` is strict (`body.Content`): unknown
+> blocks/attrs error and nothing is visited; kinds visit in
+> `schema.Blocks` order, blocks within a kind in source order;
+> callback diagnostics are collected and the walk continues.
 
 Benchmarks + release:
 
