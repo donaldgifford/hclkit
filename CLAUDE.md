@@ -24,7 +24,11 @@ homelab fleet:
 
 ```
 cmd/hclkit/             main package — cobra subcommands, kept thin; logic lives in the library
-pkg/hclkit/             public library API (Loader, Diagnostics, options); consumers import this
+pkg/hclkit/             public library API (Loader, Diagnostics, options, EvalCtxBuilder); consumers import this
+pkg/hclkit/funcs/       std HCL function bundle (case helpers, now, env) — imports only hcl/cty+stdlib
+pkg/hclkit/varsfile/    variable-block decode + vars-file resolution primitives
+pkg/hclkit/ctytypes/    refined decode helpers (Duration, Enum) with HCL-position diagnostics
+pkg/hclkit/partial/     hcldec spec decode w/ retained exprs + ordered block walks
 internal/parser/        hclparse wrapper (extension dispatch, file map for diagnostics)
 internal/testutil/      test-only golden/fixture helpers — import from _test.go files only
 docs/                   docz-managed: rfc/ adr/ design/ impl/ plan/ investigation/
@@ -64,8 +68,10 @@ renovate.json5          extends donaldgifford/renovate-config (go + docker + mis
 - `just test-pkg ./internal/foo` — single package.
 - `just test-integration` — `//go:build integration` tests (the
   end-to-end consumer-pattern tests under `examples/`).
-- `just bench` — benchmarks across the repo (`./...`). None exist yet;
-  Phase 3 of IMPL-0001 adds load/decode benchmarks.
+- `just bench` — benchmarks across the repo (`./...`). The load/decode
+  benchmarks live in `pkg/hclkit/bench_test.go` over
+  `pkg/hclkit/testdata/bench/` fixtures (forge-blueprint and
+  repo-guardian-policy shapes).
 
 ### Lint + format
 

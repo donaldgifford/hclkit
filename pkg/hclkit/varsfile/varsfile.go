@@ -196,7 +196,8 @@ func DecodeAssignments(body hcl.Body) (map[string]Assignment, hcl.Diagnostics) {
 // Resolution is collect-all and follows the anchoring matrix:
 // undeclared assignments error at the vars-file name, missing
 // required variables at the declaration, conversion failures at the
-// assignment expression, and validations run only over variables
+// assignment expression (or at the default expression when the
+// default fails conversion), and validations run only over variables
 // that resolved cleanly.
 func Resolve(declared map[string]Variable, assigns map[string]Assignment, ctx *hcl.EvalContext) (*VarsResult, hcl.Diagnostics) {
 	var diags hcl.Diagnostics

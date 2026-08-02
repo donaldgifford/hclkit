@@ -20,11 +20,14 @@ type ExprMap map[string]hcl.Expression
 // also appears in the spec's implied schema is an error. An absent
 // retained attribute is simply missing from the returned ExprMap —
 // not a diagnostic; the caller decides whether absence matters.
+// Duplicate retain names are collapsed.
 //
-// ctx may be nil for a literals-only eager decode. On error the
-// decoded value and ExprMap are still returned as far as they got —
-// hcldec produces partial values — so callers gate on
-// diags.HasErrors(), same as every Load* path.
+// ctx may be nil for a literals-only eager decode. Invalid arguments
+// — a nil body or spec, or a retain conflict — fail before decoding
+// with a NilVal and nil map. Once decoding runs, the value and
+// ExprMap are returned as far as they got — hcldec produces partial
+// values — so callers gate on diags.HasErrors(), same as every Load*
+// path.
 func DecodeSpec(body hcl.Body, spec hcldec.Spec, ctx *hcl.EvalContext, retain ...string) (cty.Value, ExprMap, hcl.Diagnostics) {
 	if body == nil || spec == nil {
 		return cty.NilVal, nil, hcl.Diagnostics{{

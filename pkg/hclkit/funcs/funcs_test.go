@@ -87,6 +87,18 @@ func TestEnvNilLookupUsesProcessEnv(t *testing.T) {
 	}
 }
 
+func TestEnvFuncVar(t *testing.T) {
+	t.Setenv("HCLKIT_TEST_ENVFUNC", "via-var")
+
+	got, err := funcs.EnvFunc.Call([]cty.Value{cty.StringVal("HCLKIT_TEST_ENVFUNC")})
+	if err != nil {
+		t.Fatalf("EnvFunc call error = %v, want nil", err)
+	}
+	if got.AsString() != "via-var" {
+		t.Errorf("EnvFunc = %q, want %q", got.AsString(), "via-var")
+	}
+}
+
 func TestEnvNullArgErrors(t *testing.T) {
 	if _, err := funcs.Env(nil).Call([]cty.Value{cty.NullVal(cty.String)}); err == nil {
 		t.Error("env(null) error = nil, want non-nil (null and missing are different mistakes)")

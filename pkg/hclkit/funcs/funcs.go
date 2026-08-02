@@ -24,7 +24,7 @@ import (
 )
 
 // Std returns the standard function bundle keyed by HCL-visible name,
-// with env bound to the process environment (Env(nil)). Each call
+// with env bound to the process environment (EnvFunc). Each call
 // returns a fresh map so callers can merge or override entries
 // without mutating a shared bundle.
 func Std() map[string]function.Function {
@@ -34,9 +34,14 @@ func Std() map[string]function.Function {
 		"pascalCase": PascalCaseFunc,
 		"kebabCase":  KebabCaseFunc,
 		"now":        NowFunc,
-		"env":        Env(nil),
+		"env":        EnvFunc,
 	}
 }
+
+// EnvFunc is env(name) bound to the process environment — Env(nil),
+// exported for symmetry with the other bundle members. Use Env for a
+// custom lookup (tests, allowlists).
+var EnvFunc = Env(nil)
 
 // Env returns the env(name) function backed by lookup. A nil lookup
 // uses os.Getenv. Missing keys return the empty string (Unix shell

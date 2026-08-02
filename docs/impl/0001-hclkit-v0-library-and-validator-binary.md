@@ -413,12 +413,18 @@ Benchmarks + release:
 
 - The gohcl × refined-types spike outcome (refined path or
   validating-helper fallback) is recorded in this doc.
+  *(Verified 2026-08-02: spike-outcome blockquote above —
+  validating-helper path on `hcl.Expression` fields.)*
 - Property tests and integration tests pass; `just bench` runs the
   new benchmarks; coverage gates still hold.
+  *(Verified 2026-08-02: `go test -race ./...`,
+  `just test-integration`, `just bench`, and `just coverage-gate`
+  all green; ctytypes/partial at 100%, varsfile 89.6%.)*
 - A tagged release exists for the merged Phase 3 PR(s) (OQ-5). The
   adopter validation (`spt`/`forge`/`fwsync`, RFC-0001 Phase 3
   criterion) is IMPL-0002 wave 2 and does not gate the next phase
-  here.
+  here. *(Pending merge — auto-tags on the Phase 3 PR merge via the
+  semver label, same as Phase 1's v0.1.0.)*
 
 ---
 
@@ -518,14 +524,14 @@ Release gates:
       gate 60%/40% unchanged.
 - [x] Golden tests for the diagnostic renderer and all CLI output,
       regenerated via the `-update` flag in `internal/testutil`.
-- [ ] Integration tests behind `//go:build integration` — at minimum
+- [x] Integration tests behind `//go:build integration` — at minimum
       one end-to-end test per `examples/` pattern (`nilctx`,
       `envfunc`, `varsfile`).
-- [ ] Table-driven tests for merge modes, option combinations, and
+- [x] Table-driven tests for merge modes, option combinations, and
       every bundled function.
-- [ ] Property-based tests for `Duration`/`Enum` round-trips and
+- [x] Property-based tests for `Duration`/`Enum` round-trips and
       diagnostic positions.
-- [ ] Benchmarks for load+decode of representative consumer configs,
+- [x] Benchmarks for load+decode of representative consumer configs,
       wired to `just bench`.
 - [ ] Partial-decode test pass on real forge + repo-guardian fixtures
       before tagging v1.0 (Phase 4 gate).

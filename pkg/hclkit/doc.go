@@ -12,9 +12,22 @@
 //	}
 //
 // Loaders compose through functional options: eval contexts, extra
-// functions and variables, multi-file merge behavior, and a
-// diagnostic tee writer. Later phases add subpackages for the
-// standard function bundle, vars-file decoding, refined cty types,
-// partial decoding, and decode-time validators; see DESIGN-0001 in
+// functions and variables, multi-file merge behavior, vars files
+// (WithVarsFile), and a diagnostic tee writer. EvalCtxBuilder
+// assembles eval contexts from functions, variables, and locals
+// blocks.
+//
+// Subpackages cover the shapes gohcl alone doesn't:
+//
+//   - funcs: the standard HCL function bundle (case helpers, now,
+//     env) for Loader and EvalCtxBuilder registration.
+//   - varsfile: Terraform-style variable declarations with
+//     validation blocks, resolved from literal assignment files.
+//   - ctytypes: refined decode helpers (durations, closed string
+//     sets) with HCL-position diagnostics.
+//   - partial: hcldec spec decoding with retained expressions and
+//     ordered block-kind walks; Loader.LoadSpec is the entry point.
+//
+// Decode-time validators arrive in a later phase; see DESIGN-0001 in
 // the repository's docs tree.
 package hclkit
