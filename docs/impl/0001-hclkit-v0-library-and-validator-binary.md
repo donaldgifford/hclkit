@@ -249,9 +249,12 @@ EvalContext + functions:
 
 Vars-file:
 
-- [ ] Implement `pkg/hclkit/varsfile`: `variable` block decode
+- [x] Implement `pkg/hclkit/varsfile`: `variable` block decode
       (`type`, `default`, `validate`, `choices`), assignment-file
-      parsing, binding as `var.<name>`.
+      parsing, binding as `var.<name>`. *(Implemented per the amended
+      spec below: validation blocks instead of validate/choices;
+      split DecodeVariables / DecodeAssignments / Resolve primitives;
+      89.6% coverage.)*
 - [ ] Implement `Loader.LoadVarsFile` → `(*VarsResult, Diagnostics)`
       and the `WithVarsFile(path)` one-shot option.
 
