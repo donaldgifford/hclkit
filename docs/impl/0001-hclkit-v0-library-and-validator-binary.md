@@ -294,8 +294,11 @@ Vars-file:
 > attr `NameRange`; declared-no-value-no-default → error at the
 > declaration `DefRange`; conversion failure → error at the
 > assignment expr range; validations run only over resolved vars.
-- [ ] Add `examples/envfunc` (spt shape) and `examples/varsfile`
-      (forge shape) with integration tests.
+- [x] Add `examples/envfunc` (spt shape) and `examples/varsfile`
+      (forge shape) with integration tests. *(envfunc pins the Unix
+      unset-env-is-"" semantics; varsfile covers the WithVarsFile
+      decode, a validation-block failure surfacing its error_message,
+      and the standalone LoadVarsFile Declared flow.)*
 
 Refined types:
 
