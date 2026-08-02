@@ -223,8 +223,9 @@ func Resolve(declared map[string]Variable, assigns map[string]Assignment, ctx *h
 		}
 	}
 
-	result := &VarsResult{Values: cty.ObjectVal(values), Declared: declared}
-	diags = diags.Extend(validate(declared, values, ctx))
+	valuesObj := cty.ObjectVal(values)
+	result := &VarsResult{Values: valuesObj, Declared: declared}
+	diags = diags.Extend(validate(declared, values, valuesObj, ctx))
 	return result, diags
 }
 
@@ -278,14 +279,14 @@ func resolveOne(decl *Variable, assigns map[string]Assignment, ctx *hcl.EvalCont
 // resolved cleanly. Conditions evaluate in a child context with var
 // bound; Functions stays nil so lookup falls through to the caller's
 // functions.
-func validate(declared map[string]Variable, values map[string]cty.Value, ctx *hcl.EvalContext) hcl.Diagnostics {
+func validate(declared map[string]Variable, values map[string]cty.Value, valuesObj cty.Value, ctx *hcl.EvalContext) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	valCtx := &hcl.EvalContext{}
 	if ctx != nil {
 		valCtx = ctx.NewChild()
 	}
-	valCtx.Variables = map[string]cty.Value{"var": cty.ObjectVal(values)}
+	valCtx.Variables = map[string]cty.Value{"var": valuesObj}
 
 	for name := range declared {
 		if _, ok := values[name]; !ok {

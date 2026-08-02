@@ -34,6 +34,11 @@ func DecodeSpec(body hcl.Body, spec hcldec.Spec, ctx *hcl.EvalContext, retain ..
 		}}
 	}
 
+	if len(retain) == 0 {
+		val, diags := hcldec.Decode(body, spec, ctx)
+		return val, ExprMap{}, diags
+	}
+
 	var diags hcl.Diagnostics
 
 	implied := hcldec.ImpliedSchema(spec)
@@ -66,20 +71,16 @@ func DecodeSpec(body hcl.Body, spec hcldec.Spec, ctx *hcl.EvalContext, retain ..
 	}
 
 	exprs := make(ExprMap, len(names))
-	decodeBody := body
-	if len(names) > 0 {
-		attrSchema := make([]hcl.AttributeSchema, len(names))
-		for i, name := range names {
-			attrSchema[i] = hcl.AttributeSchema{Name: name}
-		}
-		content, remain, pcDiags := body.PartialContent(&hcl.BodySchema{Attributes: attrSchema})
-		diags = diags.Extend(pcDiags)
-		for name, attr := range content.Attributes {
-			exprs[name] = attr.Expr
-		}
-		decodeBody = remain
+	attrSchema := make([]hcl.AttributeSchema, len(names))
+	for i, name := range names {
+		attrSchema[i] = hcl.AttributeSchema{Name: name}
+	}
+	content, remain, pcDiags := body.PartialContent(&hcl.BodySchema{Attributes: attrSchema})
+	diags = diags.Extend(pcDiags)
+	for name, attr := range content.Attributes {
+		exprs[name] = attr.Expr
 	}
 
-	val, decDiags := hcldec.Decode(decodeBody, spec, ctx)
+	val, decDiags := hcldec.Decode(remain, spec, ctx)
 	return val, exprs, diags.Extend(decDiags)
 }

@@ -397,9 +397,15 @@ Partial-decode:
 
 Benchmarks + release:
 
-- [ ] Add load+decode benchmarks for representative consumer configs
+- [x] Add load+decode benchmarks for representative consumer configs
       (a forge blueprint, a repo-guardian policy file); point
-      `just bench` at them.
+      `just bench` at them. *(`pkg/hclkit/bench_test.go` over
+      `testdata/bench/` fixtures — full forge flow ~200µs/op,
+      repo-guardian policy ~81µs/op, vars-file resolve ~70µs/op on
+      Apple M5 Max. go-performance checkpoint passed: no structural
+      issues; the forge flow's inherent 2× parse (LoadVarsFile +
+      LoadFile) noted as fine for a startup path, revisit only on a
+      measured consumer ask.)*
 - [ ] Tag each merged PR (per OQ-5); the phase's latest tag is what
       IMPL-0002 wave 2 (`spt`/`forge`/`fwsync`) pins.
 
