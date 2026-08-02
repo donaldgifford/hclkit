@@ -55,6 +55,7 @@ type Loader struct {
 	funcs      map[string]function.Function
 	vars       map[string]cty.Value
 	varsFiles  []string
+	validators []Validator
 	mergeMode  MergeMode
 	diagWriter io.Writer
 }
@@ -194,6 +195,11 @@ func (l *Loader) LoadVarsFile(configPath, varsPath string) (*VarsResult, Diagnos
 func (l *Loader) loadBodies(p *parser.Parser, bodies []hcl.Body, target any) hcl.Diagnostics {
 	ctx := l.evalContext()
 
+	// Validators walk the raw parsed bodies: the stripped remains
+	// bindVars produces aren't *hclsyntax.Body, so the as-written
+	// bodies are the only ones validators can enumerate.
+	rawBodies := bodies
+
 	var diags hcl.Diagnostics
 	if len(l.varsFiles) > 0 {
 		var varsDiags hcl.Diagnostics
@@ -202,6 +208,10 @@ func (l *Loader) loadBodies(p *parser.Parser, bodies []hcl.Body, target any) hcl
 		if diags.HasErrors() {
 			return diags
 		}
+	}
+
+	for _, v := range l.validators {
+		diags = diags.Extend(v.Validate(rawBodies, ctx))
 	}
 
 	if l.mergeMode == MergeAppend {

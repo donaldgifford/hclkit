@@ -441,15 +441,38 @@ v1.0.0 tag.
 
 Validators:
 
-- [ ] Define the `Validator` interface and wire `WithValidators(...)`
+- [x] Define the `Validator` interface and wire `WithValidators(...)`
       into the Loader decode path.
-- [ ] Implement `validate.NewRefValidator(verb, targetKind)` —
+- [x] Implement `validate.NewRefValidator(verb, targetKind)` —
       collects declared block labels by kind, verifies every
       referenced name resolves, diagnostics anchored at the
       *reference* site.
-- [ ] Implement `validate.NewUniqueValidator(blockKind, attribute)`.
-- [ ] Unit tests: resolution across files (`LoadDir`), missing
+- [x] Implement `validate.NewUniqueValidator(blockKind, attribute)`.
+- [x] Unit tests: resolution across files (`LoadDir`), missing
       targets, duplicate detection, diagnostic positions.
+      *(validate at 97.2% coverage; LoadDir integration under both
+      merge modes; per-element anchors asserted to file:line:col.)*
+
+> **Validator deviations from DESIGN-0001 (architecture review,
+> 2026-08-02).** **(1)** The `Validator` interface lives in
+> `pkg/hclkit` (`Validate(bodies []hcl.Body, ctx *hcl.EvalContext)
+> hcl.Diagnostics`); constructors return `*RefValidator` /
+> `*UniqueValidator`, not `Validator` — the validate subpackage
+> can't name `hclkit.Validator` under the hcl/cty-only import rule;
+> structural typing preserves the contract (compile-time pinned in
+> tests). **(2)** Validation is native-syntax only: enumerating
+> arbitrary block types requires `*hclsyntax.Body`, so JSON bodies
+> are skipped silently. Validators therefore receive the *raw parsed
+> bodies* (pre-variable-strip — `PartialContent` remains aren't
+> hclsyntax) with the fully assembled ctx, var binding included.
+> **(3)** References resolve from the `Verb` attribute in blocks of
+> *any* kind plus root attrs (fwsync's cross-kind `rule{set=...}`
+> shape), not just `TargetKind` blocks. Syntactic lists anchor
+> per-element; evaluated lists/sets/tuples anchor at the attribute
+> expression. Eval failures/null/unknown are skipped (decode reports
+> those). **(4)** Validators run pre-decode inside `loadBodies`,
+> collect-all with decode diags; `LoadSpec`/`LoadVarsFile` excluded
+> from v0 validation.
 
 Lint binary:
 

@@ -59,6 +59,28 @@ func WithVarsFile(path string) Option {
 	return func(l *Loader) { l.varsFiles = append(l.varsFiles, path) }
 }
 
+// Validator inspects parsed file bodies before decode and reports
+// position-aware diagnostics — cross-block reference resolution,
+// uniqueness, and similar structural checks. The validate subpackage
+// provides implementations; any type with this Validate method
+// satisfies the interface structurally.
+//
+// Validators receive every file body as written (in vars-file mode
+// that includes the variable blocks the decode later strips) together
+// with the fully assembled EvalContext, var binding included.
+type Validator interface {
+	Validate(bodies []hcl.Body, ctx *hcl.EvalContext) hcl.Diagnostics
+}
+
+// WithValidators registers validators run by LoadFile, LoadBytes, and
+// LoadDir before decoding. Repeatable and accumulating; validators
+// run in registration order and their diagnostics merge with decode
+// diagnostics (collect-all — validator errors do not stop the
+// decode). LoadSpec and LoadVarsFile do not run validators.
+func WithValidators(vs ...Validator) Option {
+	return func(l *Loader) { l.validators = append(l.validators, vs...) }
+}
+
 // WithMergeMode sets how LoadDir combines multiple files. The default
 // is MergeOverride.
 func WithMergeMode(m MergeMode) Option {
